@@ -64,7 +64,6 @@ void Tracking::onInit() {
 
   if (_gui_) {
     int flags = cv::WINDOW_NORMAL | cv::WINDOW_FREERATIO | cv::WINDOW_GUI_EXPANDED;
-    cv::namedWindow("original", flags);
     cv::namedWindow("tracking", flags);
   }
 
@@ -88,7 +87,6 @@ void Tracking::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   const cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, color_encoding);
 
   if (_gui_) {
-    cv::imshow("original", bridge_image_ptr->image);
     showTrackingImage(bridge_image_ptr->image);
     cv::waitKey(1);
   }
@@ -107,21 +105,18 @@ void Tracking::showTrackingImage(cv::InputArray image) {
   if (success) {
     // Tracking success : Draw the tracked object
     cv::rectangle(tracking_image, bbox, cv::Scalar(255, 0, 0), 2, 1);
+    cv::imshow("tracking", tracking_image);
   } else {
-    // Tracking failure detected.
+    // Tracking failure detected
     cv::putText(tracking_image, "Tracking failure detected", cv::Point(100, 80), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 255), 2);
-
-    // Here, after detecting a failure, we reinitialize the tracker.
-    // User selects a new bounding box.
-    bbox = cv::selectROI("Select Object", tracking_image, false, false);
+    // Pause and allow user to select new bbox
+    bbox = cv::selectROI("tracking", tracking_image, false, false);
     // Reinitialize the tracker with the new bbox.
     tracker_->init(image, bbox);
   }
-
-  cv::imshow("tracking", tracking_image);
 }
 
-} // namespace vision_example
+} // namespace tracking_example
 
 /* every nodelet must include macros which export the class as a nodelet plugin */
 #include <pluginlib/class_list_macros.h>
