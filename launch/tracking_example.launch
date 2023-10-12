@@ -1,0 +1,41 @@
+<launch>
+
+  <!-- defines name of the namespace of the drone -->
+  <arg name="UAV_NAME" default="$(env UAV_NAME)" />
+  <arg name="RUN_TYPE" default="$(env RUN_TYPE)" />
+
+  <!-- set to false if the nodelet should run under an external nodelet manager -->
+  <arg name="standalone" default="true" />
+
+  <!-- allows disabling the gui from command line -->
+  <arg name="gui" default="true" />
+
+  <!-- will it run using GNU debugger? -->
+  <arg name="debug" default="false" />
+  <arg unless="$(arg debug)" name="launch_prefix_debug" value=""/>
+  <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
+
+  <!-- will it run as standalone nodelet or using a nodelet manager? -->
+  <arg name="manager" default="$(arg UAV_NAME)_tracker_manager" />
+  <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
+  <arg unless="$(arg standalone)" name="nodelet" value="load"/>
+  <arg     if="$(arg standalone)" name="nodelet_manager" value=""/>
+  <arg unless="$(arg standalone)" name="nodelet_manager" value="$(arg manager)"/>
+
+  <group ns="$(arg UAV_NAME)">
+
+    <!-- Tracking nodelet -->
+    <node pkg="nodelet" type="nodelet" name="tracking_example" args="$(arg nodelet) tracking_example/Tracking $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
+
+      <!-- Parameters loaded from launch file -->
+      <param name="gui" type="bool" value="$(arg gui)"/>
+      <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)"/>
+
+      <!-- Subscribers -->
+      <remap from="~image_in" to="bluefox_front/image_raw" />
+
+    </node>
+
+  </group>
+
+</launch>

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>tracking_example</name>
+  <version>1.0.0</version>
+
+  <description>Tracking Example</description>
+  <maintainer email="mychkvad@fel.cvut.cz">Vadim Mychko</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>nodelet</depend>
+  <depend>std_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>mrs_lib</depend>
+  <depend>cv_bridge</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>image_geometry</depend>
+
+  <export>
+    <!-- The plugins.xml file defines nodelet as a plugin -->
+    <nodelet plugin="${prefix}/plugins.xml" />
+
+  </export>
+
+</package>
