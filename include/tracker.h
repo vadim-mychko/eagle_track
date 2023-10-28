@@ -1,5 +1,5 @@
-#ifndef TRACK_H
-#define TRACK_H
+#ifndef TRACKER_H
+#define TRACKER_H
 
 /* each ROS nodelet must have these */
 #include <ros/ros.h>
@@ -45,4 +45,4 @@ private:
 
 } // namespace eagle_track
 
-#endif // TRACK_H
+#endif // TRACKER_H

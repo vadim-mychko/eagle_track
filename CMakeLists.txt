@@ -29,6 +29,6 @@ include_directories(include
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_library(Tracker src/track.cpp)
+add_library(Tracker src/tracker.cpp)
 add_dependencies(Tracker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(Tracker ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})

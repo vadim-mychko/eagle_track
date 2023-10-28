@@ -5,7 +5,7 @@ socket_name: mrs
 attach: false
 tmux_options: -f /etc/ctu-mrs/tmux.conf
 # you can modify these
-pre_window: export RUN_TYPE=simulation;
+pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; 
 startup_window: uav_detect
 windows:
   - roscore:
@@ -15,7 +15,7 @@ windows:
   - gazebo:
       layout: tiled
       panes:
-        - waitForRos; roslaunch mrs_uav_gazebo_simulation simulation.launch world_file:="`rospack find eagle_gazebo_resources`/worlds/cisarsky_ostrov.world" gui:=true
+        - waitForRos; roslaunch mrs_uav_gazebo_simulation simulation.launch world_file:=`rospack find eagle_gazebo_resources`/worlds/cisarsky_ostrov.world gui:=true
   - status:
       layout: tiled
       panes:
@@ -35,7 +35,7 @@ windows:
       layout: tiled
       panes:
         - export UAV_NAME=uav91; waitForHw; roslaunch mrs_uav_core core.launch
-          platform_config:="`rospack find eagle_gazebo_resources`/config/mrs_uav_system/eaglemk2.yaml"
+          platform_config:=`rospack find eagle_gazebo_resources`/config/mrs_uav_system/eaglemk2.yaml
           custom_config:=./config/custom_config.yaml
           world_config:=./config/world_config.yaml
           network_config:=./config/network_config.yaml
@@ -60,16 +60,16 @@ windows:
   - arm_offboard:
       layout: tiled
       panes:
-        - 'export UAV_NAME=uav91; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard'
-        - 'export UAV_NAME=uav2;  waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard'
+        - export UAV_NAME=uav91; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
+        - export UAV_NAME=uav2;  waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
   - rviz:
       layout: tiled
       panes:
         - waitForControl; roslaunch mrs_uav_core rviz.launch
   - eagle_track:
       layout: tiled
-        - export UAV_NAME=uav91; waitForControl; roslaunch eagle_track track.launch
+        -  waitForControl; roslaunch eagle_track track.launch
   - uav_detect:
       layout: tiled
       panes:
-        - export UAV_NAME=uav91; waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eaglemk2_os1_sim_mask.png
+        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eaglemk2_os1_sim_mask.png
