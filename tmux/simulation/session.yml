@@ -1,0 +1,72 @@
+# do not modify these
+root: ./
+name: simulation
+socket_name: mrs
+attach: false
+tmux_options: -f /etc/ctu-mrs/tmux.conf
+# you can modify these
+pre_window: export RUN_TYPE=simulation;
+startup_window: uav_detect
+windows:
+  - roscore:
+      layout: tiled
+      panes:
+        - roscore
+  - gazebo:
+      layout: tiled
+      panes:
+        - waitForRos; roslaunch mrs_uav_gazebo_simulation simulation.launch world_file:="`rospack find eagle_gazebo_resources`/worlds/cisarsky_ostrov.world" gui:=true
+  - status:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav91; waitForHw; roslaunch mrs_uav_status status.launch
+        - export UAV_NAME=uav2;  waitForHw; roslaunch mrs_uav_status status.launch
+  - spawn:
+      layout: tiled
+      panes:
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file `rospack find eagle_track`/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-64 --use-gpu-ray"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --enable-rangefinder --pos_file `rospack find eagle_track`/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth"
+  - hw_api:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav91; waitForTime; roslaunch mrs_uav_px4_api api.launch
+        - export UAV_NAME=uav2;  waitForTime; roslaunch mrs_uav_px4_api api.launch
+  - core:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav91; waitForHw; roslaunch mrs_uav_core core.launch
+          platform_config:="`rospack find eagle_gazebo_resources`/config/mrs_uav_system/eaglemk2.yaml"
+          custom_config:=./config/custom_config.yaml
+          world_config:=./config/world_config.yaml
+          network_config:=./config/network_config.yaml
+        - export UAV_NAME=uav2; waitForHw; roslaunch mrs_uav_core core.launch
+          platform_config:=`rospack find mrs_uav_gazebo_simulation`/config/mrs_uav_system/f550.yaml
+          custom_config:=./config/custom_config.yaml
+          world_config:=./config/world_config.yaml
+          network_config:=./config/network_config.yaml
+  - takeoff:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav91; waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
+        - export UAV_NAME=uav2;  waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
+  - goto:
+      layout: tiled
+      panes:
+        - 'history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[0.0, 10.0, 1.5, 0.0\]\"'
+  - tf_connector:
+      layout: tiled
+      panes:
+        - waitForControl; roslaunch tf_connector tf_connector.launch
+  - arm_offboard:
+      layout: tiled
+      panes:
+        - 'export UAV_NAME=uav91; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard'
+        - 'export UAV_NAME=uav2;  waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard'
+  - rviz:
+      layout: tiled
+      panes:
+        - waitForControl; roslaunch mrs_uav_core rviz.launch
+  - uav_detect:
+      layout: tiled
+      panes:
+        - export UAV_NAME=uav91; waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eaglemk2_os1_sim_mask.png
