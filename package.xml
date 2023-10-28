@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <package format="2">
 
-  <name>tracking_example</name>
+  <name>eagle_track</name>
   <version>1.0.0</version>
 
-  <description>Tracking Example</description>
+  <description>Tracking other UAVs with two cameras on board</description>
   <maintainer email="mychkvad@fel.cvut.cz">Vadim Mychko</maintainer>
   <license>MIT</license>
 

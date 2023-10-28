@@ -1,5 +1,5 @@
 <library path="lib/libTracking">
-  <class name="tracking_example/Tracking" type="tracking_example::Tracking" base_class_type="nodelet::Nodelet">
-    <description>Tracking nodelet</description>
+  <class name="eagle_track/Tracker" type="eagle_track::Tracker" base_class_type="nodelet::Nodelet">
+    <description>Tracker nodelet</description>
   </class>
 </library>

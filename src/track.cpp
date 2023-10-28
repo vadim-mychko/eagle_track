@@ -1,46 +1,9 @@
-/* each ROS nodelet must have these */
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <nodelet/nodelet.h>
+#include "track.h"
 
-/* some OpenCV includes */
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/tracking/tracker.hpp>
-
-/* ROS includes for working with OpenCV and images */
-#include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
-
-/* custom helper functions from our library */
-#include <mrs_lib/param_loader.h>
-
-namespace tracking_example
+namespace eagle_track
 {
 
-class Tracking : public nodelet::Nodelet {
-
-public:
-  /* onInit() is called when nodelet is launched (similar to main() in regular node) */
-  virtual void onInit();
-
-private:
-  /* flags */
-  std::atomic<bool> is_initialized_ = false;
-
-  /* ros parameters */
-  std::string _uav_name_;
-  bool _gui_ = true;
-
-  // | ---------------------- subscribers --------------------- |
-  image_transport::Subscriber sub_image_;
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg);
-
-  // | -------------------- image processing -------------------- |
-  cv::Ptr<cv::TrackerKCF> tracker_ = cv::TrackerKCF::create();
-  void showTrackingImage(cv::InputArray image);
-};
-
-void Tracking::onInit() {
+void Tracker::onInit() {
   /* obtain node handle */
   ros::NodeHandle nh = nodelet::Nodelet::getMTPrivateNodeHandle();
 
@@ -71,13 +34,13 @@ void Tracking::onInit() {
   image_transport::ImageTransport it(nh);
 
   // | ----------------- initialize subscribers ----------------- |
-  sub_image_ = it.subscribe("image_in", 1, &Tracking::callbackImage, this);
+  sub_image_ = it.subscribe("image_in", 1, &Tracker::callbackImage, this);
 
   ROS_INFO_ONCE("[Tracking]: initialized");
   is_initialized_ = true;
 }
 
-void Tracking::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   if (!is_initialized_) {
     return;
   }
@@ -92,7 +55,7 @@ void Tracking::callbackImage(const sensor_msgs::ImageConstPtr& msg) {
   }
 }
 
-void Tracking::showTrackingImage(cv::InputArray image) {
+void Tracker::showTrackingImage(cv::InputArray image) {
   // cv::InputArray indicates that the variable should not be modified, but we want
   // to draw into the image. Therefore we need to copy it.
   cv::Mat tracking_image;
@@ -116,8 +79,8 @@ void Tracking::showTrackingImage(cv::InputArray image) {
   }
 }
 
-} // namespace tracking_example
+} // namespace eagle_track
 
 /* every nodelet must include macros which export the class as a nodelet plugin */
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(tracking_example::Tracking, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(eagle_track::Tracker, nodelet::Nodelet);
