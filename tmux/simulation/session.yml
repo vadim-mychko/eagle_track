@@ -5,7 +5,7 @@ socket_name: mrs
 attach: false
 tmux_options: -f /etc/ctu-mrs/tmux.conf
 # you can modify these
-pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; 
+pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation
 startup_window: uav_detect
 windows:
   - roscore:
@@ -68,8 +68,9 @@ windows:
         - waitForControl; roslaunch mrs_uav_core rviz.launch
   - eagle_track:
       layout: tiled
+      panes:
         -  waitForControl; roslaunch eagle_track track.launch
   - uav_detect:
       layout: tiled
       panes:
-        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eaglemk2_os1_sim_mask.png
+        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eaglemk2_os1_128_sim_mask.png

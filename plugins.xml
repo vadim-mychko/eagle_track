@@ -1,4 +1,4 @@
-<library path="lib/libTracking">
+<library path="lib/libTracker">
   <class name="eagle_track/Tracker" type="eagle_track::Tracker" base_class_type="nodelet::Nodelet">
     <description>Tracker nodelet</description>
   </class>
