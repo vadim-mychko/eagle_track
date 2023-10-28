@@ -69,8 +69,8 @@ windows:
   - eagle_track:
       layout: tiled
       panes:
-        -  waitForControl; roslaunch eagle_track track.launch
+        -  waitForControl; roslaunch eagle_track track.launch gui:=false
   - uav_detect:
       layout: tiled
       panes:
-        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eaglemk2_os1_128_sim_mask.png
+        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eagle_os1_64_sim_mask.png
