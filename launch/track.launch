@@ -24,7 +24,7 @@
 
   <group ns="$(arg UAV_NAME)">
 
-    <!-- Tracking nodelet -->
+    <!-- Tracker nodelet -->
     <node pkg="nodelet" type="nodelet" name="eagle_track" args="$(arg nodelet) eagle_track/Tracker $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
 
       <!-- Parameters loaded from launch file -->
