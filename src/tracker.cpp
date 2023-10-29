@@ -23,40 +23,29 @@ void Tracker::onInit() {
 
   // | ---------------------- subscribers --------------------- |
   sub_front_ = it.subscribe("camera_front", 1, &Tracker::callbackFront, this);
-  sub_down_ = it.subscribe("camera_down", 1, &Tracker::callbackDown, this);
   sub_front_info_ = nh.subscribe("camera_front_info", 1, &Tracker::callbackFrontInfo, this);
-  sub_down_info_ = nh.subscribe("camera_down_info", 1, &Tracker::callbackDownInfo, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
   pub_front_ = it.advertise("tracker_front", 1);
-  pub_down_  = it.advertise("tracker_down", 1);
 
   initialized_ = true;
   NODELET_INFO("[Tracker]: Initialized");
 }
 
 void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from front camera");
-  callbackImage(msg, front_tracker_, pub_front_);
-}
-
-void Tracker::callbackDown(const sensor_msgs::ImageConstPtr& msg) {
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from down camera");
-  callbackImage(msg, down_tracker_, pub_down_);
-}
-
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, cv::Ptr<cv::Tracker> tracker, const image_transport::Publisher& pub) {
   if (!initialized_) {
     return;
   }
+
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from front camera");
 
   const std::string encoding = "bgr8";
   const cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
-  bool success = tracker->update(image, bbox);
+  bool success = front_tracker_->update(image, bbox);
   if (success) {
     // cv::InputArray indicates that the variable should not be modified, but we want
     // to draw into the image. Therefore we need to copy it.
@@ -64,12 +53,12 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, cv::Ptr<cv::T
     image.copyTo(track_image);
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2, 1);
 
-    NODELET_INFO_THROTTLE(1.0, "[Tracker]: Update succeeded");
-    publishImage(track_image, msg->header, encoding, pub);
+    publishFront(track_image, msg->header, encoding);
+    NODELET_INFO_THROTTLE(1.0, "[Tracker]: Front tracker update succeeded");
   } else {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Update failed");
-    publishImage(image, msg->header, encoding, pub);
-  } 
+    publishFront(image, msg->header, encoding);
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Front tracker update failed");
+  }
 }
 
 void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
@@ -80,16 +69,6 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
   got_front_info_ = true;
   front_model_.fromCameraInfo(*msg);
   NODELET_INFO("[Tracker]: Initialized front camera info");
-}
-
-void Tracker::callbackDownInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
-  if (!initialized_) {
-    return;
-  }
-
-  got_down_info_ = true;
-  down_model_.fromCameraInfo(*msg);
-  NODELET_INFO("[Tracker]: Initialized down camera info");
 }
 
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
@@ -105,12 +84,10 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
     return lhs.confidence < rhs.confidence;
   };
   const uav_detect::Detection& detection = *std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
-  updateTracker(front_tracker_, got_front_info_, front_model_, detection);
-  updateTracker(down_tracker_, got_down_info_, down_model_, detection);
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Updated tracker with detection");
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Updated front tracker with detection");
 }
 
-void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub) {
+void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
   // Prepare a cv_bridge image to be converted to the ROS message
   cv_bridge::CvImage bridge_image_out;
   bridge_image_out.image = image.getMat();
@@ -119,20 +96,7 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
 
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-  pub.publish(out_msg);
-}
-
-void Tracker::updateTracker(cv::Ptr<cv::Tracker> tracker, bool got_camera_info, const image_geometry::PinholeCameraModel& camera_info, const uav_detect::Detection& detection) {
-  if (!got_camera_info) {
-    return;
-  }
-
-  geometry_msgs::Point point = detection.position;
-  cv::Rect2d bbox = projectPoint(camera_info, point.x, point.y, point.z);
-}
-
-cv::Rect2d Tracker::projectPoint(const image_geometry::PinholeCameraModel& camera_info, double x, double y, double z) {
-
+  pub_front_.publish(out_msg);
 }
 
 } // namespace eagle_track
