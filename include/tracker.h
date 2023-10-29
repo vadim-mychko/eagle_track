@@ -48,7 +48,7 @@ private:
 
   void callbackFront(const sensor_msgs::ImageConstPtr& msg);
   void callbackDown(const sensor_msgs::ImageConstPtr& msg);
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_transport::Publisher& pub);
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg, cv::Ptr<cv::Tracker> tracker, const image_transport::Publisher& pub);
   void callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg);
   void callbackDownInfo(const sensor_msgs::CameraInfoConstPtr& msg);
   void callbackDetections(const uav_detect::DetectionsConstPtr& msg);
@@ -62,7 +62,12 @@ private:
   // | -------------------- tracker essentials -------------------- |
   image_geometry::PinholeCameraModel front_model_;
   image_geometry::PinholeCameraModel down_model_;
-  cv::Ptr<cv::TrackerKCF> tracker_ = cv::TrackerKCF::create();
+  cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
+  cv::Ptr<cv::Tracker> down_tracker_ = cv::TrackerKCF::create();
+
+  // | -------------------- utility functions -------------------- |
+  void updateTracker(cv::Ptr<cv::Tracker> tracker, bool got_camera_info, const image_geometry::PinholeCameraModel& camera_info, const uav_detect::Detection& detection);
+  cv::Rect2d projectPoint(const image_geometry::PinholeCameraModel& camera_info, double x, double y, double z);
 };
 
 } // namespace eagle_track

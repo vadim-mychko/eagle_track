@@ -38,15 +38,15 @@ void Tracker::onInit() {
 
 void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from front camera");
-  callbackImage(msg, pub_front_);
+  callbackImage(msg, front_tracker_, pub_front_);
 }
 
 void Tracker::callbackDown(const sensor_msgs::ImageConstPtr& msg) {
   NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from down camera");
-  callbackImage(msg, pub_down_);
+  callbackImage(msg, down_tracker_, pub_down_);
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_transport::Publisher& pub) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, cv::Ptr<cv::Tracker> tracker, const image_transport::Publisher& pub) {
   if (!initialized_) {
     return;
   }
@@ -56,7 +56,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
-  bool success = tracker_->update(image, bbox);
+  bool success = tracker->update(image, bbox);
   if (success) {
     // cv::InputArray indicates that the variable should not be modified, but we want
     // to draw into the image. Therefore we need to copy it.
@@ -64,9 +64,11 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
     image.copyTo(track_image);
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2, 1);
 
+    NODELET_INFO_THROTTLE(1.0, "[Tracker]: Update succeeded");
     publishImage(track_image, msg->header, encoding, pub);
   } else {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: update failed");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Update failed");
+    publishImage(image, msg->header, encoding, pub);
   } 
 }
 
@@ -77,6 +79,7 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
   got_front_info_ = true;
   front_model_.fromCameraInfo(*msg);
+  NODELET_INFO("[Tracker]: Initialized front camera info");
 }
 
 void Tracker::callbackDownInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
@@ -86,13 +89,14 @@ void Tracker::callbackDownInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
   got_down_info_ = true;
   down_model_.fromCameraInfo(*msg);
+  NODELET_INFO("[Tracker]: Initialized down camera info");
 }
 
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
   if (!initialized_) {
     return;
   } else if (msg->detections.empty()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: received zero detections");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
     return;
   }
 
@@ -101,6 +105,9 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
     return lhs.confidence < rhs.confidence;
   };
   const uav_detect::Detection& detection = *std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
+  updateTracker(front_tracker_, got_front_info_, front_model_, detection);
+  updateTracker(down_tracker_, got_down_info_, down_model_, detection);
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Updated tracker with detection");
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub) {
@@ -113,7 +120,19 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   pub.publish(out_msg);
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: update succeeded");
+}
+
+void Tracker::updateTracker(cv::Ptr<cv::Tracker> tracker, bool got_camera_info, const image_geometry::PinholeCameraModel& camera_info, const uav_detect::Detection& detection) {
+  if (!got_camera_info) {
+    return;
+  }
+
+  geometry_msgs::Point point = detection.position;
+  cv::Rect2d bbox = projectPoint(camera_info, point.x, point.y, point.z);
+}
+
+cv::Rect2d Tracker::projectPoint(const image_geometry::PinholeCameraModel& camera_info, double x, double y, double z) {
+
 }
 
 } // namespace eagle_track
