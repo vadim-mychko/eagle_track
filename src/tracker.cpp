@@ -4,22 +4,21 @@ namespace eagle_track
 {
 
 void Tracker::onInit() {
-  // obtain node handle
   ros::NodeHandle nh = nodelet::Nodelet::getMTPrivateNodeHandle();
 
-  // waits for the ROS to publish clock
+  ROS_INFO("[Tracker]: Waiting for valid time...");
   ros::Time::waitForValid();
 
   // | ------------------- ros parameters ------------------ |
-  mrs_lib::ParamLoader param_loader(nh, "Tracker");
-  param_loader.loadParam("UAV_NAME", _uav_name_);
+  mrs_lib::ParamLoader pl(nh, "Tracker");
+  NODELET_INFO("[Tracker]: Loading static parameters:");
+  pl.loadParam("UAV_NAME", _uav_name_);
 
-  if (!param_loader.loadedSuccessfully()) {
-    ROS_ERROR("[Tracker]: failed to load non-optional parameters!");
+  if (!pl.loadedSuccessfully()) {
+    NODELET_ERROR("[Tracker]: Failed to load non-optional parameters!");
     ros::shutdown();
   }
 
-  // initialize the image transport, needs node handle
   image_transport::ImageTransport it(nh);
 
   // | ---------------------- subscribers --------------------- |
@@ -32,14 +31,16 @@ void Tracker::onInit() {
   pub_down_  = it.advertise("tracker_down", 1);
 
   initialized_ = true;
-  ROS_INFO_ONCE("[Tracker]: initialized");
+  NODELET_INFO("[Tracker]: Initialized");
 }
 
 void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing new image from front camera");
   callbackImage(msg, pub_front_);
 }
 
 void Tracker::callbackDown(const sensor_msgs::ImageConstPtr& msg) {
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing new image from down camera");
   callbackImage(msg, pub_down_);
 }
 
@@ -62,6 +63,8 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2, 1);
 
     publishImage(track_image, msg->header, encoding, pub);
+  } else {
+    NODELET_ERROR_THROTTLE(1.0, "[Tracker]: update of tracker failed");
   }
 }
 
@@ -73,14 +76,15 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub) {
   // Prepare a cv_bridge image to be converted to the ROS message
-    cv_bridge::CvImage bridge_image_out;
-    bridge_image_out.image = image.getMat();
-    bridge_image_out.header = header;
-    bridge_image_out.encoding = encoding;
+  cv_bridge::CvImage bridge_image_out;
+  bridge_image_out.image = image.getMat();
+  bridge_image_out.header = header;
+  bridge_image_out.encoding = encoding;
 
-    // Now convert the cv_bridge image to a ROS message and publish it
-    sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-    pub.publish(out_msg);
+  // Now convert the cv_bridge image to a ROS message and publish it
+  sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
+  pub.publish(out_msg);
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: update of tracker succeeded");
 }
 
 } // namespace eagle_track
