@@ -49,6 +49,8 @@ private:
   image_transport::Publisher pub_front_;
   image_transport::Publisher pub_down_;
 
+  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub);
+
   // | -------------------- tracker essentials -------------------- |
   cv::Ptr<cv::TrackerKCF> tracker_ = cv::TrackerKCF::create();
 };

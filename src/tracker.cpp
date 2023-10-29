@@ -24,7 +24,7 @@ void Tracker::onInit() {
 
   // | ---------------------- subscribers --------------------- |
   sub_front_ = it.subscribe("tracker_front", 1, &Tracker::callbackFront, this);
-  sub_down_ = it.subscribe("tracker_down", 1, &Tracker::callbackBack, this);
+  sub_down_ = it.subscribe("tracker_down", 1, &Tracker::callbackDown, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
@@ -48,9 +48,8 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
     return;
   }
 
-  const std::string color_encoding = "bgr8";
-  const std_msgs::Header msg_header = msg->header;
-  const cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, color_encoding);
+  const std::string encoding = "bgr8";
+  const cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
@@ -60,18 +59,9 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
     // to draw into the image. Therefore we need to copy it.
     cv::Mat track_image;
     image.copyTo(track_image);
-
-    // Draw the received bounding box onto the copied image
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2, 1);
 
-    // Prepare a cv_bridge image to be converted to the ROS message
-    cv_bridge::CvImage bridge_image_out;
-    bridge_image_out.image = track_image;
-    bridge_image_out.encoding = color_encoding;
-
-    // Now convert the cv_bridge image to a ROS message and publish it
-    sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-    pub.publish(out_msg);
+    publishImage(track_image, msg->header, encoding, pub);
   }
 }
 
@@ -79,6 +69,18 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
   if (!initialized_) {
     return;
   }
+}
+
+void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub) {
+  // Prepare a cv_bridge image to be converted to the ROS message
+    cv_bridge::CvImage bridge_image_out;
+    bridge_image_out.image = image.getMat();
+    bridge_image_out.header = header;
+    bridge_image_out.encoding = encoding;
+
+    // Now convert the cv_bridge image to a ROS message and publish it
+    sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
+    pub.publish(out_msg);
 }
 
 } // namespace eagle_track
