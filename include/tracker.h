@@ -7,7 +7,6 @@
 #include <nodelet/nodelet.h>
 
 /* some OpenCV includes */
-#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/tracking/tracker.hpp>
 
 /* ROS includes for working with OpenCV and images */
@@ -16,6 +15,9 @@
 
 /* custom helper functions from our library */
 #include <mrs_lib/param_loader.h>
+
+/* UAV detection */
+#include <uav_detect/Detections.h>
 
 namespace eagle_track
 {
@@ -27,20 +29,26 @@ public:
   virtual void onInit();
 
 private:
-  /* flags */
-  bool is_initialized_ = false;
+  // | ---------------------- flags --------------------- |
+  bool initialized_ = false;
 
-  /* ros parameters */
+  // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
-  bool _gui_ = true;
 
   // | ---------------------- subscribers --------------------- |
-  image_transport::Subscriber sub_image_;
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg);
+  image_transport::Subscriber sub_front_;
+  image_transport::Subscriber sub_down_;
+  ros::Subscriber sub_detections_;
 
-  // | -------------------- image processing -------------------- |
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg);
+  void callbackDetections(const uav_detect::DetectionsConstPtr& msg);
+
+  // | ---------------------- publishers --------------------- |
+  image_transport::Publisher pub_front_;
+  image_transport::Publisher pub_down_;
+
+  // | -------------------- tracker essentials -------------------- |
   cv::Ptr<cv::TrackerKCF> tracker_ = cv::TrackerKCF::create();
-  void showTrackingImage(cv::InputArray image);
 };
 
 } // namespace eagle_track
