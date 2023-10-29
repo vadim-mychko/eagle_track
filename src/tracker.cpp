@@ -22,8 +22,10 @@ void Tracker::onInit() {
   image_transport::ImageTransport it(nh);
 
   // | ---------------------- subscribers --------------------- |
-  sub_front_ = it.subscribe("tracker_front", 1, &Tracker::callbackFront, this);
-  sub_down_ = it.subscribe("tracker_down", 1, &Tracker::callbackDown, this);
+  sub_front_ = it.subscribe("camera_front", 1, &Tracker::callbackFront, this);
+  sub_down_ = it.subscribe("camera_down", 1, &Tracker::callbackDown, this);
+  sub_front_info_ = nh.subscribe("camera_front_info", 1, &Tracker::callbackFrontInfo, this);
+  sub_down_info_ = nh.subscribe("camera_down_info", 1, &Tracker::callbackDownInfo, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
@@ -35,12 +37,12 @@ void Tracker::onInit() {
 }
 
 void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing new image from front camera");
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from front camera");
   callbackImage(msg, pub_front_);
 }
 
 void Tracker::callbackDown(const sensor_msgs::ImageConstPtr& msg) {
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing new image from down camera");
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from down camera");
   callbackImage(msg, pub_down_);
 }
 
@@ -64,8 +66,26 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
 
     publishImage(track_image, msg->header, encoding, pub);
   } else {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: update of tracker failed");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: update failed");
   } 
+}
+
+void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
+  if (!initialized_) {
+    return;
+  }
+
+  got_front_info_ = true;
+  front_model_.fromCameraInfo(*msg);
+}
+
+void Tracker::callbackDownInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
+  if (!initialized_) {
+    return;
+  }
+
+  got_down_info_ = true;
+  down_model_.fromCameraInfo(*msg);
 }
 
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
@@ -81,8 +101,6 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
     return lhs.confidence < rhs.confidence;
   };
   const uav_detect::Detection& detection = *std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
-
-  
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub) {
@@ -95,7 +113,7 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   pub.publish(out_msg);
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: update of tracker succeeded");
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: update succeeded");
 }
 
 } // namespace eagle_track

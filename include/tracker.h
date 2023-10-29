@@ -12,6 +12,7 @@
 // ROS includes for working with OpenCV and images
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
+#include <image_geometry/pinhole_camera_model.h>
 
 // custom helper functions from our library
 #include <mrs_lib/param_loader.h>
@@ -32,6 +33,8 @@ public:
 private:
   // | ---------------------- flags --------------------- |
   bool initialized_ = false;
+  bool got_front_info_ = false;
+  bool got_down_info_ = false;
 
   // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
@@ -39,11 +42,15 @@ private:
   // | ---------------------- subscribers --------------------- |
   image_transport::Subscriber sub_front_;
   image_transport::Subscriber sub_down_;
+  ros::Subscriber sub_front_info_;
+  ros::Subscriber sub_down_info_;
   ros::Subscriber sub_detections_;
 
   void callbackFront(const sensor_msgs::ImageConstPtr& msg);
   void callbackDown(const sensor_msgs::ImageConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_transport::Publisher& pub);
+  void callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackDownInfo(const sensor_msgs::CameraInfoConstPtr& msg);
   void callbackDetections(const uav_detect::DetectionsConstPtr& msg);
 
   // | ---------------------- publishers --------------------- |
@@ -53,6 +60,8 @@ private:
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub);
 
   // | -------------------- tracker essentials -------------------- |
+  image_geometry::PinholeCameraModel front_model_;
+  image_geometry::PinholeCameraModel down_model_;
   cv::Ptr<cv::TrackerKCF> tracker_ = cv::TrackerKCF::create();
 };
 

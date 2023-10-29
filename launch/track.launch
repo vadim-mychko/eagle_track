@@ -26,8 +26,10 @@
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)"/>
 
       <!-- Subscribers -->
-      <remap from="~image_front" to="bluefox_front/image_raw" />
-      <remap from="~image_down" to="bluefox_down/image_raw" />
+      <remap from="~camera_front" to="bluefox_front/image_raw" />
+      <remap from="~camera_down" to="bluefox_down/image_raw" />
+      <remap from="~camera_front_info" to="bluefox_front/camera_info" />
+      <remap from="~camera_down_info" to="bluefox_down/camera_info" />
       <remap from="~detections" to="uav_detection/detections" />
 
       <!-- Publishers -->
