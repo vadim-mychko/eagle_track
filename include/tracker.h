@@ -1,22 +1,22 @@
 #ifndef TRACKER_H
 #define TRACKER_H
 
-/* each ROS nodelet must have these */
+// each ROS nodelet must have these
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <nodelet/nodelet.h>
 
-/* some OpenCV includes */
+// some OpenCV includes
 #include <opencv2/tracking/tracker.hpp>
 
-/* ROS includes for working with OpenCV and images */
+// ROS includes for working with OpenCV and images
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 
-/* custom helper functions from our library */
+// custom helper functions from our library
 #include <mrs_lib/param_loader.h>
 
-/* UAV detection */
+// UAV detection
 #include <uav_detect/Detections.h>
 
 namespace eagle_track
@@ -25,7 +25,7 @@ namespace eagle_track
 class Tracker : public nodelet::Nodelet {
 
 public:
-  /* onInit() is called when nodelet is launched (similar to main() in regular node) */
+  // onInit() is called when nodelet is launched (similar to main() in regular node)
   virtual void onInit();
 
 private:
@@ -40,7 +40,9 @@ private:
   image_transport::Subscriber sub_down_;
   ros::Subscriber sub_detections_;
 
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg);
+  void callbackFront(const sensor_msgs::ImageConstPtr& msg);
+  void callbackDown(const sensor_msgs::ImageConstPtr& msg);
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_transport::Publisher& pub);
   void callbackDetections(const uav_detect::DetectionsConstPtr& msg);
 
   // | ---------------------- publishers --------------------- |
