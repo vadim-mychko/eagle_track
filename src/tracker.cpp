@@ -6,16 +6,16 @@ namespace eagle_track
 void Tracker::onInit() {
   ros::NodeHandle nh = nodelet::Nodelet::getMTPrivateNodeHandle();
 
-  ROS_INFO("[Tracker]: Waiting for valid time...");
+  ROS_INFO_ONCE("[Tracker]: Waiting for valid time...");
   ros::Time::waitForValid();
 
   // | ------------------- ros parameters ------------------ |
   mrs_lib::ParamLoader pl(nh, "Tracker");
-  NODELET_INFO("[Tracker]: Loading static parameters:");
+  NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   pl.loadParam("UAV_NAME", _uav_name_);
 
   if (!pl.loadedSuccessfully()) {
-    NODELET_ERROR("[Tracker]: Failed to load non-optional parameters!");
+    NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
     ros::shutdown();
   }
 
@@ -30,7 +30,7 @@ void Tracker::onInit() {
   pub_front_ = it.advertise("tracker_front", 1);
 
   initialized_ = true;
-  NODELET_INFO("[Tracker]: Initialized");
+  NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
 void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
@@ -68,7 +68,7 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 
   got_front_info_ = true;
   front_model_.fromCameraInfo(*msg);
-  NODELET_INFO("[Tracker]: Initialized front camera info");
+  NODELET_INFO_ONCE("[Tracker]: Initialized front camera info");
 }
 
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
