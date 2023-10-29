@@ -17,6 +17,7 @@
 #include <mrs_lib/param_loader.h>
 
 // UAV detection
+#include <uav_detect/Detection.h>
 #include <uav_detect/Detections.h>
 
 namespace eagle_track

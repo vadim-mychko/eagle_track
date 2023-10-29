@@ -64,14 +64,25 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, const image_t
 
     publishImage(track_image, msg->header, encoding, pub);
   } else {
-    NODELET_ERROR_THROTTLE(1.0, "[Tracker]: update of tracker failed");
-  }
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: update of tracker failed");
+  } 
 }
 
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
   if (!initialized_) {
     return;
+  } else if (msg->detections.empty()) {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: received zero detections");
+    return;
   }
+
+  // find the most confident detection
+  auto less_confident = [](const uav_detect::Detection& lhs, const uav_detect::Detection& rhs) {
+    return lhs.confidence < rhs.confidence;
+  };
+  const uav_detect::Detection& detection = *std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
+
+  
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const image_transport::Publisher& pub) {
