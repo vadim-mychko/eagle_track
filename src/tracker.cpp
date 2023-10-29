@@ -74,17 +74,7 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
   if (!initialized_) {
     return;
-  } else if (msg->detections.empty()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
-    return;
   }
-
-  // find the most confident detection
-  auto less_confident = [](const uav_detect::Detection& lhs, const uav_detect::Detection& rhs) {
-    return lhs.confidence < rhs.confidence;
-  };
-  const uav_detect::Detection& detection = *std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Updated front tracker with detection");
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {

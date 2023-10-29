@@ -53,12 +53,8 @@ private:
   void publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding);
 
   // | -------------------- tracker essentials -------------------- |
-  std::mutex front_mutex_;
-  cv::Mat last_front_;
   image_geometry::PinholeCameraModel front_model_;
   cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
-
-  // | -------------------- utility functions -------------------- |
 };
 
 } // namespace eagle_track
