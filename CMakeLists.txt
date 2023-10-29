@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   image_geometry
   mrs_lib
+  uav_detect
 )
 
 find_package(OpenCV REQUIRED)

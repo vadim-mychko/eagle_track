@@ -11,8 +11,8 @@
 
 // ROS includes for working with OpenCV and images
 #include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
 #include <image_geometry/pinhole_camera_model.h>
+#include <cv_bridge/cv_bridge.h>
 
 // custom helper functions from our library
 #include <mrs_lib/param_loader.h>
