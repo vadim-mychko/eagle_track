@@ -99,13 +99,12 @@ cv::Point2d Tracker::projectPoint(const cv::Point3d& point) {
 
   std::string camera_frame = front_model_.tfFrame();
   auto ret = transformer_->transformSingle(pt3d_world, camera_frame);
-  geometry_msgs::PoseStamped pt3d_cam;
-  if (ret) {
-    pt3d_cam = ret.value();
-  } else {
+  if (!ret.has_value()) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform point from world to camera frame, cannot project point");
     return cv::Point2d();
   }
+
+  geometry_msgs::PoseStamped pt3d_cam = ret.value();
 
   // | ----------- backproject the point from 3D to 2D ---------- |
   cv::Point3d pt3d(pt3d_cam.pose.position.x, pt3d_cam.pose.position.y, pt3d_cam.pose.position.z);
