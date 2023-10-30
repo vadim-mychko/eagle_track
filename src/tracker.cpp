@@ -143,7 +143,7 @@ cv::Point2d Tracker::projectPoint(const cv::Point3d& point) {
   if (ret) {
     pt3d_cam = ret.value();
   } else {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to tranform point from world to camera frame, cannot project point");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform point from world to camera frame, cannot project point");
     return cv::Point2d();
   }
 
