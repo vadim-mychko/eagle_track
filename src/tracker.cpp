@@ -88,6 +88,7 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
     return;
   } else if (msg->detections.empty()) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
+    return;
   }
 
   // get detection from the detector with the highest confidence

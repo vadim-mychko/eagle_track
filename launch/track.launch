@@ -26,6 +26,7 @@
 
       <!-- Parameters loaded from launch file -->
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)"/>
+      <param name="world_frame_id" type="string" value="$(arg world_frame_id)"/>
 
       <!-- Subscribers -->
       <remap from="~camera_front" to="bluefox_front/image_raw" />
