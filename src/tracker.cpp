@@ -45,7 +45,13 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
-  bool success = front_tracker_->update(image, bbox);
+  bool success;
+  {
+    std::lock_guard<std::mutex> lock(front_mutex_);
+    front_frame_ = image.getMat();
+    success = front_success_ = front_tracker_->update(image, bbox);
+  }
+
   if (success) {
     // cv::InputArray indicates that the variable should not be modified, but we want
     // to draw into the image. Therefore we need to copy it.
@@ -72,9 +78,28 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
 }
 
 void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
-  if (!initialized_) {
+  if (!initialized_ || !got_front_info_ || front_success_) {
     return;
+  } else if (msg->detections.empty()) {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
   }
+
+  // TODO: MAP W.R.T. TO WORLD ORIGIN!
+
+  // get detection from the detector with the highest confidence
+  auto less_confident = [](const uav_detect::Detection& lhs, const uav_detect::Detection& rhs) {
+    return lhs.confidence < rhs.confidence;
+  };
+  auto detection = std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
+
+  // project 3D point received from the detector onto the camera
+  auto pt3d = cv::Point3d(detection->position.x, detection->position.y, detection->position.z);
+  cv::Point2d pt2d = front_model_.project3dToPixel(pt3d);
+
+  // unrectify the 2D point coordinates
+  // This is done to correct for camera distortion. IT has no effect in simulation, where the camera model
+  // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
+  const cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
