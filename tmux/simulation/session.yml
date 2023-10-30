@@ -73,4 +73,4 @@ windows:
   - eagle_track:
       layout: tiled
       panes:
-        -  waitForControl; roslaunch eagle_track track.launch
+        -  waitForControl; roslaunch eagle_track track.launch world_frame_id:=$UAV_NAME/world_origin

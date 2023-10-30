@@ -16,6 +16,7 @@
 
 // custom helper functions from our library
 #include <mrs_lib/param_loader.h>
+#include <mrs_lib/transformer.h>
 
 // UAV detection
 #include <uav_detect/Detection.h>
@@ -37,6 +38,7 @@ private:
 
   // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
+  std::string _world_frame_id_;
 
   // | ---------------------- subscribers --------------------- |
   image_transport::Subscriber sub_front_;
@@ -58,6 +60,10 @@ private:
   cv::Mat front_frame_;
   image_geometry::PinholeCameraModel front_model_;
   cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
+
+  // | -------------------- point projection -------------------- |
+  std::unique_ptr<mrs_lib::Transformer> transformer_;
+  cv::Point2d projectPoint(const cv::Point3d& point);
 };
 
 } // namespace eagle_track

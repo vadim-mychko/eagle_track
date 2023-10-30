@@ -13,6 +13,7 @@ void Tracker::onInit() {
   mrs_lib::ParamLoader pl(nh, "Tracker");
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   pl.loadParam("UAV_NAME", _uav_name_);
+  pl.loadParam("world_frame_id", _world_frame_id_);
 
   if (!pl.loadedSuccessfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
@@ -28,6 +29,11 @@ void Tracker::onInit() {
 
   // | ---------------------- publishers --------------------- |
   pub_front_ = it.advertise("tracker_front", 1);
+
+  // | --------------------- tf transformer --------------------- |
+  transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
+  transformer_->setDefaultPrefix(_uav_name_);
+  transformer_->retryLookupNewest(true);
 
   initialized_ = true;
   NODELET_INFO_ONCE("[Tracker]: Initialized");
@@ -84,8 +90,6 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
   }
 
-  // TODO: MAP W.R.T. TO WORLD ORIGIN!
-
   // get detection from the detector with the highest confidence
   auto less_confident = [](const uav_detect::Detection& lhs, const uav_detect::Detection& rhs) {
     return lhs.confidence < rhs.confidence;
@@ -93,13 +97,10 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
   auto detection = std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
 
   // project 3D point received from the detector onto the camera
-  auto pt3d = cv::Point3d(detection->position.x, detection->position.y, detection->position.z);
-  cv::Point2d pt2d = front_model_.project3dToPixel(pt3d);
+  auto point = cv::Point3d(detection->position.x, detection->position.y, detection->position.z);
+  auto projected_point = projectPoint(point);
 
-  // unrectify the 2D point coordinates
-  // This is done to correct for camera distortion. IT has no effect in simulation, where the camera model
-  // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
-  const cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
+  // draw a 2D rectangle around projected point to update tracker
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
@@ -112,6 +113,37 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   pub_front_.publish(out_msg);
+}
+
+cv::Point2d Tracker::projectPoint(const cv::Point3d& point) {
+  // | --------- transform the point to the camera frame -------- |
+  geometry_msgs::PoseStamped pt3d_world;
+  pt3d_world.header.frame_id = _world_frame_id_;
+  pt3d_world.header.stamp = ros::Time::now();
+  pt3d_world.pose.position.x = point.x;
+  pt3d_world.pose.position.y = point.y;
+  pt3d_world.pose.position.z = point.z;
+
+  std::string camera_frame = front_model_.tfFrame();
+  auto ret = transformer_->transformSingle(pt3d_world, camera_frame);
+  geometry_msgs::PoseStamped pt3d_cam;
+  if (ret) {
+    pt3d_cam = ret.value();
+  } else {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to tranform point from world to camera frame, cannot project point");
+    return cv::Point2d();
+  }
+
+  // | ----------- backproject the point from 3D to 2D ---------- |
+  cv::Point3d pt3d(pt3d_cam.pose.position.x, pt3d_cam.pose.position.y, pt3d_cam.pose.position.z);
+  cv::Point2d pt2d = front_model_.project3dToPixel(pt3d);
+
+  // | ----------- unrectify the 2D point coordinates ----------- |
+  // This is done to correct for camera distortion. IT has no effect in simulation, where the camera model
+  // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
+  cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
+
+  return pt2d_unrec;
 }
 
 } // namespace eagle_track
