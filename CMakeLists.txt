@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_geometry
   mrs_lib
   uav_detect
+  lidar_tracker
 )
 
 find_package(OpenCV REQUIRED)

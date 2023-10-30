@@ -19,6 +19,7 @@
   <arg     if="$(arg standalone)" name="nodelet_manager" value=""/>
   <arg unless="$(arg standalone)" name="nodelet_manager" value="$(arg manager)"/>
 
+  <!-- namespace -->
   <group ns="$(arg UAV_NAME)">
 
     <!-- Tracker nodelet -->
@@ -28,10 +29,12 @@
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)"/>
       <param name="world_frame_id" type="string" value="$(arg world_frame_id)"/>
 
+      <!-- Remapping -->
+      <remap from="drone_client/detection_array" to="uav_detection/detections_pc" />
+
       <!-- Subscribers -->
       <remap from="~camera_front" to="bluefox_front/image_raw" />
       <remap from="~camera_front_info" to="bluefox_front/camera_info" />
-      <remap from="~detections" to="uav_detection/detections" />
 
       <!-- Publishers -->
       <remap from="~tracker_front" to="~tracker_front" />

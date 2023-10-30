@@ -25,7 +25,6 @@ void Tracker::onInit() {
   // | ---------------------- subscribers --------------------- |
   sub_front_ = it.subscribe("camera_front", 1, &Tracker::callbackFront, this);
   sub_front_info_ = nh.subscribe("camera_front_info", 1, &Tracker::callbackFrontInfo, this);
-  sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
   pub_front_ = it.advertise("tracker_front", 1);
@@ -51,13 +50,7 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
-  bool success;
-  {
-    std::lock_guard<std::mutex> lock(front_mutex_);
-    front_frame_ = image.getMat();
-    success = front_success_ = front_tracker_->update(image, bbox);
-  }
-
+  bool success = front_tracker_->update(image, bbox);
   if (success) {
     // cv::InputArray indicates that the variable should not be modified, but we want
     // to draw into the image. Therefore we need to copy it.
@@ -81,39 +74,6 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
   got_front_info_ = true;
   front_model_.fromCameraInfo(*msg);
   NODELET_INFO_ONCE("[Tracker]: Initialized front camera info");
-}
-
-void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
-  if (!initialized_ || !got_front_info_ || front_success_) {
-    return;
-  } else if (msg->detections.empty()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
-    return;
-  }
-
-  // get detection from the detector with the highest confidence
-  auto less_confident = [](const uav_detect::Detection& lhs, const uav_detect::Detection& rhs) {
-    return lhs.confidence < rhs.confidence;
-  };
-  auto detection = std::max_element(msg->detections.begin(), msg->detections.end(), less_confident);
-
-  // project 3D point received from the detector onto the camera
-  auto point = cv::Point3d(detection->position.x, detection->position.y, detection->position.z);
-  auto projected_point = projectPoint(point);
-
-  // draw a 2D rectangle around projected point to update tracker
-  constexpr int width = 100;
-  constexpr int height = 50;
-  cv::Point2d top_left(point.x - width / 2, point.y - height / 2);
-  cv::Point2d bottom_right(point.x + width / 2, point.y + height / 2);
-  cv::Rect2d bbox(top_left, bottom_right);
-  {
-    std::lock_guard<std::mutex> lock(front_mutex_);
-    front_tracker_->init(front_frame_, bbox);
-    front_success_ = true;
-  }
-
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Updated front tracker with received detection");
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
