@@ -101,6 +101,18 @@ void Tracker::callbackDetections(const uav_detect::DetectionsConstPtr& msg) {
   auto projected_point = projectPoint(point);
 
   // draw a 2D rectangle around projected point to update tracker
+  constexpr int width = 100;
+  constexpr int height = 50;
+  cv::Point2d top_left(point.x - width / 2, point.y - height / 2);
+  cv::Point2d bottom_right(point.x + width / 2, point.y + height / 2);
+  cv::Rect2d bbox(top_left, bottom_right);
+  {
+    std::lock_guard<std::mutex> lock(front_mutex_);
+    front_tracker_->init(front_frame_, bbox);
+    front_success_ = true;
+  }
+
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Updated front tracker with received detection");
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
