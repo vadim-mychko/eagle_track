@@ -5,7 +5,7 @@ socket_name: mrs
 attach: false
 tmux_options: -f /etc/ctu-mrs/tmux.conf
 # you can modify these
-pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation
+pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; export DETECTION_PATH=`rospack find uav_detect`
 startup_window: detect
 windows:
   - roscore:
@@ -67,8 +67,8 @@ windows:
   - detect:
       layout: tiled
       panes:
-        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eagle_os1_64_sim_mask.png
-        - waitForControl; roslaunch lidar_tracker initial_detection_selector.launch
+        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eagle_os1_64_sim_mask.png apriori_map_filename:=$DETECTION_PATH/data/ground.pts apriori_map_config_filename:=$DETECTION_PATH/config/apriori_maps/ground_plane.yaml sensor_config_filename:=$DETECTION_PATH/config/sensors/os1-64.yaml
+        - waitForControl; roslaunch lidar_tracker lidar_tracker.launch
   - track:
       layout: tiled
       panes:
