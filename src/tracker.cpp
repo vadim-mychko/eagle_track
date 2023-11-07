@@ -51,8 +51,8 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   bool success = front_tracker_->update(image, bbox);
 
   // if could not update tracker, try re-initialize it with the latest detection
-  if (!success && got_detection_) {
-    bbox = projectPoints(last_detection_.points);
+  if (!success) {
+    bbox = last_detection_;
     success = front_tracker_->init(image, bbox);
   }
 
@@ -93,8 +93,8 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      last_detection_ = track;
-      got_detection_ = true;
+      track.points.header = msg->header;
+      last_detection_ = projectPoints(track.points);
       break;
     }
   }
@@ -122,6 +122,7 @@ cv::Rect2d Tracker::projectPoints(const sensor_msgs::PointCloud2& points) {
   auto ret = transformer_->transformSingle(points, front_model_.tfFrame());
   if (!ret.has_value()) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
+    NODELET_INFO_STREAM("" << points.header.frame_id << " " << front_model_.tfFrame());
     return cv::Rect2d();
   }
 

@@ -34,7 +34,6 @@ private:
   // | ---------------------- flags --------------------- |
   bool initialized_ = false;
   bool got_front_info_ = false;
-  bool got_detection_ = false;
 
   // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
@@ -54,7 +53,7 @@ private:
   void publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding);
 
   // | -------------------- tracker essentials -------------------- |
-  lidar_tracker::Track last_detection_;
+  cv::Rect2d last_detection_;
   image_geometry::PinholeCameraModel front_model_;
   cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
 
