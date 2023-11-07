@@ -93,7 +93,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      last_detection_ = boost::make_shared<sensor_msgs::PointCloud2>(track);
+      last_detection_ = boost::make_shared<lidar_tracker::Track>(track);
       break;
     }
   }
