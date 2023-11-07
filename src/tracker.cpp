@@ -25,6 +25,7 @@ void Tracker::onInit() {
   // | ---------------------- subscribers --------------------- |
   sub_front_ = it.subscribe("camera_front", 1, &Tracker::callbackFront, this);
   sub_front_info_ = nh.subscribe("camera_front_info", 1, &Tracker::callbackFrontInfo, this);
+  sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
   pub_front_ = it.advertise("tracker_front", 1);
@@ -74,6 +75,26 @@ void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
   got_front_info_ = true;
   front_model_.fromCameraInfo(*msg);
   NODELET_INFO_ONCE("[Tracker]: Initialized front camera info");
+}
+
+void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
+  if (!initialized_) {
+    return;
+  }
+
+  if (msg->tracks.empty()) {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received 0 detections, skipping");
+    return;
+  }
+
+  for (auto track : msg->tracks) {
+    if (track.selected) {
+      last_detection_ = std::make_unique<lidar_tracker::Track>(track);
+      break;
+    }
+  }
+
+  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Received valid detection");
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {

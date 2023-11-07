@@ -18,6 +18,9 @@
 #include <mrs_lib/param_loader.h>
 #include <mrs_lib/transformer.h>
 
+// UAV detection custom messages
+#include <lidar_tracker/Tracks.h>
+
 namespace eagle_track
 {
 
@@ -39,9 +42,11 @@ private:
   // | ---------------------- subscribers --------------------- |
   image_transport::Subscriber sub_front_;
   ros::Subscriber sub_front_info_;
+  ros::Subscriber sub_detections_;
 
   void callbackFront(const sensor_msgs::ImageConstPtr& msg);
   void callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackDetections(const lidar_tracker::TracksConstPtr& msg);
 
   // | ---------------------- publishers --------------------- |
   image_transport::Publisher pub_front_;
@@ -49,6 +54,7 @@ private:
   void publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding);
 
   // | -------------------- tracker essentials -------------------- |
+  std::unique_ptr<lidar_tracker::Track> last_detection_ = nullptr;
   image_geometry::PinholeCameraModel front_model_;
   cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
 
