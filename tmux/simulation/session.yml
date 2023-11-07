@@ -40,7 +40,7 @@ windows:
           world_config:=./config/world_config.yaml
           network_config:=./config/network_config.yaml
         - export UAV_NAME=uav2; waitForHw; roslaunch mrs_uav_core core.launch
-          platform_config:=$EAGLE_PATH/config/mrs_uav_system/f550.yaml
+          platform_config:=`rospack find mrs_uav_gazebo_simulation`/config/mrs_uav_system/f550.yaml
           custom_config:=./config/custom_config.yaml
           world_config:=./config/world_config.yaml
           network_config:=./config/network_config.yaml
