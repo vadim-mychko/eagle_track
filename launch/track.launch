@@ -9,6 +9,8 @@
   <arg unless="$(arg debug)" name="launch_prefix_debug" value=""/>
   <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
 
+  <arg name="world_frame_id" default="$(arg UAV_NAME)/world_origin" />
+
   <!-- nodelet-related arguments -->
   <arg name="standalone" default="true" />
   <arg name="manager" default="$(arg UAV_NAME)_tracker_manager" />
@@ -25,6 +27,7 @@
 
       <!-- Parameters loaded from launch file -->
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)"/>
+      <param name="world_frame_id" type="string" value="$(arg world_frame_id)"/>
 
       <!-- Subscribers -->
       <remap from="~camera_front" to="bluefox_front/image_raw" />
