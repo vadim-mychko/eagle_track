@@ -5,7 +5,7 @@ socket_name: mrs
 attach: false
 tmux_options: -f /etc/ctu-mrs/tmux.conf
 # you can modify these
-pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; export DETECTION_PATH=`rospack find uav_detect`
+pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; export DETECT_PATH=`rospack find uav_detect`; export EAGLE_PATH=`rospack find eagle_gazebo_resources`; export TRACK_PATH=`rospack find eagle_track`
 startup_window: detect
 windows:
   - roscore:
@@ -15,7 +15,7 @@ windows:
   - gazebo:
       layout: tiled
       panes:
-        - waitForRos; roslaunch mrs_uav_gazebo_simulation simulation.launch world_file:=`rospack find eagle_gazebo_resources`/worlds/cisarsky_ostrov.world gui:=false
+        - waitForRos; roslaunch mrs_uav_gazebo_simulation simulation.launch world_file:=$EAGLE_PATH/worlds/cisarsky_ostrov.world gui:=false
   - status:
       layout: tiled
       panes:
@@ -24,8 +24,8 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file `rospack find eagle_track`/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-64 --use-gpu-ray"
-        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --enable-rangefinder --pos_file `rospack find eagle_track`/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-64 --use-gpu-ray"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth"
   - hw_api:
       layout: tiled
       panes:
@@ -35,12 +35,12 @@ windows:
       layout: tiled
       panes:
         - export UAV_NAME=uav91; waitForHw; roslaunch mrs_uav_core core.launch
-          platform_config:=`rospack find eagle_gazebo_resources`/config/mrs_uav_system/eaglemk2.yaml
+          platform_config:=$EAGLE_PATH/config/mrs_uav_system/eaglemk2.yaml
           custom_config:=./config/custom_config.yaml
           world_config:=./config/world_config.yaml
           network_config:=./config/network_config.yaml
         - export UAV_NAME=uav2; waitForHw; roslaunch mrs_uav_core core.launch
-          platform_config:=`rospack find mrs_uav_gazebo_simulation`/config/mrs_uav_system/f550.yaml
+          platform_config:=$EAGLE_PATH/config/mrs_uav_system/f550.yaml
           custom_config:=./config/custom_config.yaml
           world_config:=./config/world_config.yaml
           network_config:=./config/network_config.yaml
@@ -67,7 +67,7 @@ windows:
   - detect:
       layout: tiled
       panes:
-        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=`rospack find eagle_track`/masks/eagle_os1_64_sim_mask.png apriori_map_filename:=$DETECTION_PATH/data/ground.pts apriori_map_config_filename:=$DETECTION_PATH/config/apriori_maps/ground_plane.yaml sensor_config_filename:=$DETECTION_PATH/config/sensors/os1-64.yaml
+        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=$TRACK_PATH/masks/eagle_os1_64_sim_mask.png apriori_map_filename:=$DETECT_PATH/data/ground.pts apriori_map_config_filename:=$DETECT_PATH/config/apriori_maps/ground_plane.yaml sensor_config_filename:=$DETECT_PATH/config/sensors/os1-64.yaml
         - waitForControl; roslaunch lidar_tracker lidar_tracker.launch
   - track:
       layout: tiled
