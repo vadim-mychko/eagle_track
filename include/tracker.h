@@ -53,7 +53,7 @@ private:
   void publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding);
 
   // | -------------------- tracker essentials -------------------- |
-  std::unique_ptr<lidar_tracker::Track> last_detection_ = nullptr;
+  lidar_tracker::TrackConstPtr last_detection_ = nullptr;
   image_geometry::PinholeCameraModel front_model_;
   cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
 
