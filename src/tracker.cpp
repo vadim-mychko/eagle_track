@@ -51,8 +51,8 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   bool success = front_tracker_->update(image, bbox);
 
   // if could not update tracker, try re-initialize it with the latest detection
-  if (!success && !last_detection_) {
-    bbox = projectPoints(last_detection_->points);
+  if (!success && got_detection_) {
+    bbox = projectPoints(last_detection_.points);
     success = front_tracker_->init(image, bbox);
   }
 
@@ -93,7 +93,8 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      last_detection_ = boost::make_shared<lidar_tracker::Track>(track);
+      last_detection_ = track;
+      got_detection_ = true;
       break;
     }
   }
