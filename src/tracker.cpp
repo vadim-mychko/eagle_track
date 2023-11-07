@@ -43,8 +43,6 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
     return;
   }
 
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Processing image from front camera");
-
   const std::string encoding = "bgr8";
   const cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::InputArray image = bridge_image_ptr->image;
@@ -54,7 +52,8 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
 
   // if could not update tracker, try re-initialize it with the latest detection
   if (!success && !last_detection_) {
-
+    bbox = projectPoints(last_detection_->points);
+    success = front_tracker_->init(image, bbox);
   }
 
   if (success) {
@@ -88,7 +87,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
   }
 
   if (msg->tracks.empty()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received 0 detections, skipping");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
     return;
   }
 
@@ -98,8 +97,6 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
       break;
     }
   }
-
-  NODELET_INFO_THROTTLE(1.0, "[Tracker]: Received valid detection");
 }
 
 void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
@@ -114,22 +111,22 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
   pub_front_.publish(out_msg);
 }
 
-cv::Rect2d Tracker::projectPoints(const sensor_msgs::PointCloud2ConstPtr& points) {
+cv::Rect2d Tracker::projectPoints(const sensor_msgs::PointCloud2& points) {
   if (!got_front_info_) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud from world to camera frame, did not get camera info");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
     return cv::Rect2d();
   }
 
   // | --------- transform the point to the camera frame -------- |
   auto ret = transformer_->transformSingle(points, front_model_.tfFrame());
   if (!ret.has_value()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud from world to camera frame");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
     return cv::Rect2d();
   }
 
   // Convert PointCloud2 to pcl::PointCloud
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(*points, cloud);
+  pcl::fromROSMsg(points, cloud);
 
   // variables for creating bounding box to return
   double min_x = std::numeric_limits<double>::max();
