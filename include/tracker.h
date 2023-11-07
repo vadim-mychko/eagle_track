@@ -37,7 +37,6 @@ private:
 
   // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
-  std::string _world_frame_id_;
 
   // | ---------------------- subscribers --------------------- |
   image_transport::Subscriber sub_front_;
@@ -60,7 +59,7 @@ private:
 
   // | -------------------- point projection -------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_;
-  cv::Point2d projectPoint(const cv::Point3d& point);
+  cv::Rect2d projectPoints(const sensor_msgs::PointCloud2ConstPtr& points);
 };
 
 } // namespace eagle_track

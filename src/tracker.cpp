@@ -13,7 +13,6 @@ void Tracker::onInit() {
   mrs_lib::ParamLoader pl(nh, "Tracker");
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   pl.loadParam("UAV_NAME", _uav_name_);
-  pl.loadParam("world_frame_id", _world_frame_id_);
 
   if (!pl.loadedSuccessfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
@@ -52,6 +51,12 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
 
   cv::Rect2d bbox;
   bool success = front_tracker_->update(image, bbox);
+
+  // if could not update tracker, try re-initialize it with the latest detection
+  if (!success && !last_detection_) {
+
+  }
+
   if (success) {
     // cv::InputArray indicates that the variable should not be modified, but we want
     // to draw into the image. Therefore we need to copy it.
@@ -109,34 +114,49 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
   pub_front_.publish(out_msg);
 }
 
-cv::Point2d Tracker::projectPoint(const cv::Point3d& point) {
-  // | --------- transform the point to the camera frame -------- |
-  geometry_msgs::PoseStamped pt3d_world;
-  pt3d_world.header.frame_id = _world_frame_id_;
-  pt3d_world.header.stamp = ros::Time::now();
-  pt3d_world.pose.position.x = point.x;
-  pt3d_world.pose.position.y = point.y;
-  pt3d_world.pose.position.z = point.z;
-
-  std::string camera_frame = front_model_.tfFrame();
-  auto ret = transformer_->transformSingle(pt3d_world, camera_frame);
-  if (!ret.has_value()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform point from world to camera frame, cannot project point");
-    return cv::Point2d();
+cv::Rect2d Tracker::projectPoints(const sensor_msgs::PointCloud2ConstPtr& points) {
+  if (!got_front_info_) {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud from world to camera frame, did not get camera info");
+    return cv::Rect2d();
   }
 
-  geometry_msgs::PoseStamped pt3d_cam = ret.value();
+  // | --------- transform the point to the camera frame -------- |
+  auto ret = transformer_->transformSingle(points, front_model_.tfFrame());
+  if (!ret.has_value()) {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud from world to camera frame");
+    return cv::Rect2d();
+  }
 
-  // | ----------- backproject the point from 3D to 2D ---------- |
-  cv::Point3d pt3d(pt3d_cam.pose.position.x, pt3d_cam.pose.position.y, pt3d_cam.pose.position.z);
-  cv::Point2d pt2d = front_model_.project3dToPixel(pt3d);
+  // Convert PointCloud2 to pcl::PointCloud
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(*points, cloud);
 
-  // | ----------- unrectify the 2D point coordinates ----------- |
-  // This is done to correct for camera distortion. IT has no effect in simulation, where the camera model
-  // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
-  cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
+  // variables for creating bounding box to return
+  double min_x = std::numeric_limits<double>::max();
+  double min_y = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::min();
+  double max_y = std::numeric_limits<double>::min();
 
-  return pt2d_unrec;
+  for (const auto& point : cloud.points) {
+    // | ----------- backproject the point from 3D to 2D ---------- |
+    cv::Point2d pt2d = front_model_.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
+    // | ----------- unrectify the 2D point coordinates ----------- |
+    // This is done to correct for camera distortion. IT has no effect in simulation, where the camera model
+    // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
+    cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
+
+    // Check if the point projection is within image bounds
+    if (pt2d_unrec.x >= 0 && pt2d_unrec.x < front_model_.fullResolution().width
+          && pt2d_unrec.y >= 0 && pt2d_unrec.y < front_model_.fullResolution().height) {
+      // Update bounding box coordinates
+      min_x = std::min(min_x, pt2d_unrec.x);
+      min_y = std::min(min_y, pt2d_unrec.y);
+      max_x = std::max(max_x, pt2d_unrec.x);
+      max_y = std::max(max_y, pt2d_unrec.y);
+    }
+  }
+
+  return min_x < max_x && min_y < max_y ? cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y) : cv::Rect2d();
 }
 
 } // namespace eagle_track
