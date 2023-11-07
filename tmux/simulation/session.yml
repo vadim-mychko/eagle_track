@@ -61,14 +61,14 @@ windows:
   - rviz:
       layout: tiled
       panes:
-        - waitForControl; roslaunch mrs_uav_core rviz.launch
+        - waitForControl; rviz -d $DETECT_PATH/rviz/uav91.rviz
         - waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
         - waitForTime; waitForControl; roslaunch mrs_rviz_plugins rviz_interface.launch
   - detect:
       layout: tiled
       panes:
         - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=$TRACK_PATH/masks/eagle_os1_64_sim_mask.png apriori_map_filename:=$DETECT_PATH/data/ground.pts apriori_map_config_filename:=$DETECT_PATH/config/apriori_maps/ground_plane.yaml sensor_config_filename:=$DETECT_PATH/config/sensors/os1-64.yaml
-        - waitForControl; roslaunch lidar_tracker lidar_tracker.launch
+        - waitForControl; roslaunch lidar_tracker lidar_tracker.launch world_frame_id:=$UAV_NAME/world_origin
   - track:
       layout: tiled
       panes:
