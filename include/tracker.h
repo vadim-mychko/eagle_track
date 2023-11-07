@@ -37,7 +37,6 @@ private:
 
   // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
-  std::string _world_frame_;
 
   // | ---------------------- subscribers --------------------- |
   image_transport::Subscriber sub_front_;

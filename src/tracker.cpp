@@ -13,7 +13,6 @@ void Tracker::onInit() {
   mrs_lib::ParamLoader pl(nh, "Tracker");
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   pl.loadParam("UAV_NAME", _uav_name_);
-  pl.loadParam("world_frame_id", _world_frame_);
 
   if (!pl.loadedSuccessfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
@@ -32,7 +31,6 @@ void Tracker::onInit() {
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
-  transformer_->setDefaultFrame(_world_frame_);
   transformer_->setDefaultPrefix(_uav_name_);
   transformer_->retryLookupNewest(true);
 
@@ -95,6 +93,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
+      track.points.header = msg->header;
       last_detection_ = projectPoints(track.points);
       break;
     }
