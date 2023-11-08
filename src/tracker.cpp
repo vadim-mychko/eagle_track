@@ -138,7 +138,7 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   double max_x = std::numeric_limits<double>::min();
   double max_y = std::numeric_limits<double>::min();
 
-  for (const auto& point : cloud.points) {
+  for (const pcl::PointXYZ& point : cloud.points) {
     // | ----------- backproject the point from 3D to 2D ---------- |
     cv::Point2d pt2d = front_model_.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
     // | ----------- unrectify the 2D point coordinates ----------- |
