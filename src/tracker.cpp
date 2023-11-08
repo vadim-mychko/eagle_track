@@ -94,7 +94,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
   for (auto track : msg->tracks) {
     if (track.selected) {
       track.points.header = msg->header;
-      last_detection_ = projectPoints(track.points);
+      last_detection_ = transformAndProject(track.points);
       break;
     }
   }
@@ -112,22 +112,25 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
   pub_front_.publish(out_msg);
 }
 
-cv::Rect2d Tracker::projectPoints(const sensor_msgs::PointCloud2& points) {
+cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
   if (!got_front_info_) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
-    return cv::Rect2d();
-  }
-
-  // | --------- transform the point to the camera frame -------- |
-  auto ret = transformer_->transformSingle(points, front_model_.tfFrame());
-  if (!ret.has_value()) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
     return cv::Rect2d();
   }
 
   // Convert PointCloud2 to pcl::PointCloud
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(ret.value(), cloud);
+  pcl::fromROSMsg(points, cloud);
+
+  // | --------- get the transformation from to the camera frame -------- |
+  auto ret = transformer_->getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
+  if (!ret.has_value()) {
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
+    return cv::Rect2d();
+  }
+
+  // | --------- transform the pointcloud to the camera frame -------- |
+  pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
 
   // variables for creating bounding box to return
   double min_x = std::numeric_limits<double>::max();
@@ -154,7 +157,7 @@ cv::Rect2d Tracker::projectPoints(const sensor_msgs::PointCloud2& points) {
     }
   }
 
-  return min_x < max_x && min_y < max_y ? cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y) : cv::Rect2d();
+  return min_x < max_x && min_y < max_y  ? cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y) : cv::Rect2d();
 }
 
 } // namespace eagle_track
