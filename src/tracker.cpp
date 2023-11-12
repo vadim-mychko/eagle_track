@@ -86,11 +86,6 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
     return;
   }
 
-  if (msg->tracks.empty()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Received zero detections");
-    return;
-  }
-
   for (auto track : msg->tracks) {
     if (track.selected) {
       track.points.header = msg->header;
@@ -132,11 +127,13 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   // | --------- transform the pointcloud to the camera frame -------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
 
+  NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Received " << cloud.points.size() << " points from the detection");
+
   // variables for creating bounding box to return
-  double min_x = std::numeric_limits<double>::max();
-  double min_y = std::numeric_limits<double>::max();
-  double max_x = std::numeric_limits<double>::min();
-  double max_y = std::numeric_limits<double>::min();
+  double min_x = front_model_.fullResolution().width;
+  double min_y = front_model_.fullResolution().height;
+  double max_x = 0.0;
+  double max_y = 0.0;
 
   for (const pcl::PointXYZ& point : cloud.points) {
     // | ----------- backproject the point from 3D to 2D ---------- |
@@ -146,18 +143,14 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
     // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
     cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
 
-    // Check if the point projection is within image bounds
-    if (pt2d_unrec.x >= 0 && pt2d_unrec.x < front_model_.fullResolution().width
-          && pt2d_unrec.y >= 0 && pt2d_unrec.y < front_model_.fullResolution().height) {
-      // Update bounding box coordinates
-      min_x = std::min(min_x, pt2d_unrec.x);
-      min_y = std::min(min_y, pt2d_unrec.y);
-      max_x = std::max(max_x, pt2d_unrec.x);
-      max_y = std::max(max_y, pt2d_unrec.y);
-    }
+    // Update bounding box coordinates
+    min_x = std::min(min_x, pt2d_unrec.x);
+    min_y = std::min(min_y, pt2d_unrec.y);
+    max_x = std::max(max_x, pt2d_unrec.x);
+    max_y = std::max(max_y, pt2d_unrec.y); 
   }
 
-  return min_x < max_x && min_y < max_y  ? cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y) : cv::Rect2d();
+  return cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
 }
 
 } // namespace eagle_track
