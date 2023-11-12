@@ -51,7 +51,7 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   bool success = front_tracker_->update(image, bbox);
 
   // if could not update tracker, try re-initialize it with the latest detection
-  if (!success) {
+  if (!success && last_detection_ != cv::Rect2d()) {
     bbox = last_detection_;
     success = front_tracker_->init(image, bbox);
   }
@@ -61,7 +61,7 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
     // to draw into the image. Therefore we need to copy it.
     cv::Mat track_image;
     image.copyTo(track_image);
-    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2, 1);
+    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0));
 
     publishFront(track_image, msg->header, encoding);
     NODELET_INFO_THROTTLE(1.0, "[Tracker]: Front tracker update succeeded");
