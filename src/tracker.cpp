@@ -90,6 +90,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
     if (track.selected) {
       track.points.header = msg->header;
       last_detection_ = transformAndProject(track.points);
+      NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Projected the cloudpoint onto bounding box " << last_detection_);
       break;
     }
   }
@@ -117,6 +118,11 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   pcl::PointCloud<pcl::PointXYZ> cloud;
   pcl::fromROSMsg(points, cloud);
 
+  NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Received " << cloud.points.size() << " points from the detection");
+  if (cloud.points.size() < 2) {
+    return cv::Rect2d();
+  }
+
   // | --------- get the transformation from to the camera frame -------- |
   auto ret = transformer_->getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
@@ -126,8 +132,6 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
 
   // | --------- transform the pointcloud to the camera frame -------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
-
-  NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Received " << cloud.points.size() << " points from the detection");
 
   // variables for creating bounding box to return
   double min_x = front_model_.fullResolution().width;
@@ -149,6 +153,11 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
     max_x = std::max(max_x, pt2d_unrec.x);
     max_y = std::max(max_y, pt2d_unrec.y); 
   }
+
+  min_x = std::max(min_x, 0.0);
+  min_y = std::max(min_y, 0.0);
+  max_x = std::min(max_x, static_cast<double>(front_model_.fullResolution().width));
+  max_y = std::max(max_y, static_cast<double>(front_model_.fullResolution().height));
 
   return cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
 }
