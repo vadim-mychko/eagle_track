@@ -52,6 +52,7 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
 
   // if could not update tracker, try re-initialize it with the latest detection
   if (!success && (bbox = last_detection_) != cv::Rect2d()) {
+    NODELET_WARN_STREAM_THROTTLE(1.0, "[Tracker]: Reinitialization failed with " << bbox);
     success = front_tracker_->init(image, bbox);
   }
 
