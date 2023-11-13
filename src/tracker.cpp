@@ -90,7 +90,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
     if (track.selected) {
       track.points.header = msg->header;
       last_detection_ = transformAndProject(track.points);
-      NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Projected the cloudpoint onto bounding box " << last_detection_);
+      NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Projected the cloudpoint onto " << last_detection_);
       break;
     }
   }
@@ -110,7 +110,7 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
 
 cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
   if (!got_front_info_) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
     return cv::Rect2d();
   }
 
@@ -126,7 +126,7 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   // | --------- get the transformation from to the camera frame -------- |
   auto ret = transformer_->getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform pointcloud to the camera frame");
+    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
     return cv::Rect2d();
   }
 
