@@ -24,7 +24,7 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-32 --use-gpu-ray --horizontal-samples 1024 --rotation-freq 10"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-32 --use-gpu-ray --horizontal-samples 2048 --rotation-freq 10"
         - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth"
   - hw_api:
       layout: tiled
@@ -61,7 +61,7 @@ windows:
   - rviz:
       layout: tiled
       panes:
-        - waitForControl; rviz -d $DETECT_PATH/rviz/uav91.rviz
+        - waitForControl; rviz -d $TRACK_PATH/rviz/eagle.rviz
         - waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
         - waitForTime; waitForControl; roslaunch mrs_rviz_plugins rviz_interface.launch
   - detect:
