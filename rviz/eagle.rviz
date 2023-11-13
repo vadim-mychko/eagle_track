@@ -1,0 +1,1148 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /TF1/Frames1
+        - /eagle odom1/Shape1
+        - /detection1
+        - /tracked target1/Covariance1/Position1
+        - /all tracks1/Covariance1
+        - /all tracks1/Covariance1/Position1
+        - /uav11
+        - /uav21
+        - /uav31
+      Splitter Ratio: 0.32765957713127136
+    Tree Height: 328
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Nav Goal1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: raw pc
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 100; 100; 100
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid 1m
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 100
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 0.5
+      Cell Size: 5
+      Class: rviz/Grid
+      Color: 180; 180; 180
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid 5m
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: true
+      Length: 50
+      Name: main frame
+      Radius: 0.10000000149011612
+      Reference Frame: uav91/ground_truth_origin
+      Show Trail: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: false
+      Length: 5
+      Name: rtk frame
+      Radius: 0.10000000149011612
+      Reference Frame: uav91/rtk_origin
+      Show Trail: false
+      Value: false
+    - Alpha: 1
+      Class: rviz/Axes
+      Enabled: true
+      Length: 1
+      Name: target frame
+      Radius: 0.10000000149011612
+      Reference Frame: uav2/fcu
+      Show Trail: false
+      Value: true
+    - Class: rviz/TF
+      Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+    - Angle Tolerance: 0.009999999776482582
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
+      Enabled: true
+      Keep: 1
+      Name: eagle odom
+      Position Tolerance: 0.009999999776482582
+      Queue Size: 10
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Axes
+      Topic: /uav91/estimation_manager/ground_truth/odom
+      Unreliable: false
+      Value: true
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 1
+            Min Value: 1
+            Value: false
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 0
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 0; 255; 0
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: raw pc
+          Position Transformer: XYZ
+          Queue Size: 20
+          Selectable: false
+          Size (Pixels): 5
+          Size (m): 0.05000000074505806
+          Style: Spheres
+          Topic: /uav91/os_cloud_nodelet/points
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /uav91/lidar_tracker/lidar3d_fitted_plane
+          Name: fitted plane
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Alpha: 0.20000000298023224
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 2
+            Min Value: 2
+            Value: false
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 0; 0; 0
+          Color Transformer: FlatColor
+          Decay Time: 5
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 0; 255; 0
+          Min Color: 0; 0; 0
+          Name: self pc
+          Position Transformer: XYZ
+          Queue Size: 20
+          Selectable: false
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Spheres
+          Topic: /pts_self
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 2
+            Min Value: 2
+            Value: false
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 0; 0
+          Color Transformer: FlatColor
+          Decay Time: 5
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 0; 255; 0
+          Min Color: 0; 0; 0
+          Name: target pc
+          Position Transformer: XYZ
+          Queue Size: 20
+          Selectable: false
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Spheres
+          Topic: /pts_target
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
+      Name: pc filtering
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: range
+          Class: rviz/PointCloud2
+          Color: 255; 225; 0
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: separate bg clusters removal
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.25999999046325684
+          Style: Boxes
+          Topic: /uav91/uav_detection/sepclusters_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: range
+          Class: rviz/PointCloud2
+          Color: 200; 200; 200
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: apriori background
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.25
+          Style: Boxes
+          Topic: /uav91/uav_detection/apriori_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 0; 0
+          Max Intensity: 4096
+          Min Color: 255; 255; 255
+          Min Intensity: 0
+          Name: sure air
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.009999999776482582
+          Style: Flat Squares
+          Topic: /uav91/uav_detection/sure_air_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: false
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav81/uav_detection/update_flags
+          Name: update flags
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /uav81/uav_detection/frontiers_mks
+          Name: frontiers
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav91/uav_detection/lidar_raycast
+          Name: lidar raycast
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /uav91/uav_detection/operation_area
+          Name: oparea
+          Namespaces:
+            "": true
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav91/uav_detection/voxel_map
+          Name: voxel map
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /uav91/uav_detection/detections_mks
+          Name: clusters
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: /uav91/uav_detection/lidar_fov
+          Name: Ouster FOV
+          Namespaces:
+            {}
+          Queue Size: 1
+          Value: false
+        - Alpha: 0.800000011920929
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: confidence
+          Class: rviz/PointCloud2
+          Color: 255; 0; 255
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 1
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: detections pc
+          Position Transformer: XYZ
+          Queue Size: 20
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.5
+          Style: Spheres
+          Topic: /uav91/uav_detection/detections_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 0; 200; 50
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: background pc
+          Position Transformer: XYZ
+          Queue Size: 20
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.25
+          Style: Boxes
+          Topic: /uav91/uav_detection/background_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
+      Name: detection
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 0; 0
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: pre-aligned pc
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /uav91/selflocalization/filtered_input_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 100; 200; 100
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: aligned pc
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /uav91/selflocalization/aligned_input_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 100; 100; 255
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: aligned orig. pc
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.10000000149011612
+          Style: Flat Squares
+          Topic: /uav91/selflocalization/points_transformed
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 100; 100; 155
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: static pc
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.05000000074505806
+          Style: Flat Squares
+          Topic: /uav91/selflocalization/static_pc
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: false
+      Name: self-localization
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: false
+        Position:
+          Alpha: 0.6000000238418579
+          Color: 255; 0; 0
+          Scale: 0.5
+          Value: true
+        Value: true
+      Enabled: true
+      Keep: 1
+      Name: tracked target
+      Position Tolerance: 0.10000000149011612
+      Queue Size: 10
+      Shape:
+        Alpha: 0
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.20000000298023224
+        Head Radius: 0.10000000149011612
+        Shaft Length: 0.5
+        Shaft Radius: 0.05000000074505806
+        Value: Arrow
+      Topic: /uav91/lidar_tracker/tracked_drone
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: mrs_rviz_plugins/PoseWithCovarianceArray
+      Color: 255; 25; 0
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1.5
+          Value: false
+        Position:
+          Alpha: 1
+          Color: 0; 255; 0
+          Scale: 2
+          Value: true
+        Value: true
+      Enabled: true
+      Head Length: 0.20000000298023224
+      Head Radius: 0.10000000149011612
+      Name: all tracks
+      Queue Size: 10
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Arrow
+      Topic: /uav91/lidar_tracker/dbg_tracks
+      Unreliable: false
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /uav91/control_manager/safety_area_markers
+      Name: safety area
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Alpha: 0.5
+      Arrow Length: 0.5
+      Axes Length: 0.30000001192092896
+      Axes Radius: 0.009999999776482582
+      Class: rviz/PoseArray
+      Color: 0; 0; 255
+      Enabled: false
+      Head Length: 0.07000000029802322
+      Head Radius: 0.029999999329447746
+      Name: setpoint trajectory
+      Queue Size: 100
+      Shaft Length: 0.23000000417232513
+      Shaft Radius: 0.009999999776482582
+      Shape: Arrow (Flat)
+      Topic: /uav91/control_manager/trajectory_original/poses
+      Unreliable: false
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: id
+      Class: rviz/PointCloud2
+      Color: 255; 0; 0
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: external detections
+      Position Transformer: XYZ
+      Queue Size: 30
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.5
+      Style: Spheres
+      Topic: /uav91/drone_client/detection_array
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Alpha: 1
+      Arrow Length: 1
+      Axes Length: 0.30000001192092896
+      Axes Radius: 0.009999999776482582
+      Class: rviz/PoseArray
+      Color: 0; 200; 255
+      Enabled: false
+      Head Length: 0.5
+      Head Radius: 0.5
+      Name: interceptor dbg_traj
+      Queue Size: 10
+      Shaft Length: 0
+      Shaft Radius: 0
+      Shape: Arrow (3D)
+      Topic: /uav91/interceptor/dbg_trajectory
+      Unreliable: false
+      Value: false
+    - Alpha: 1
+      Arrow Length: 0.800000011920929
+      Axes Length: 0.30000001192092896
+      Axes Radius: 0.009999999776482582
+      Class: rviz/PoseArray
+      Color: 0; 100; 255
+      Enabled: true
+      Head Length: 0.20999999344348907
+      Head Radius: 0.09000000357627869
+      Name: mpc_tracker dbg_traj
+      Queue Size: 10
+      Shaft Length: 0.5
+      Shaft Radius: 0.029999999329447746
+      Shape: Arrow (3D)
+      Topic: /uav91/control_manager/mpc_tracker/trajectory_processed/poses
+      Unreliable: false
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /uav91/control_manager/mpc_tracker/trajectory_processed/markers
+      Name: mpc tracker debug
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /usb_cam/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: compressed
+      Unreliable: false
+      Value: false
+    - Class: rviz/Camera
+      Enabled: false
+      Image Rendering: background and overlay
+      Image Topic: /mobius_cor/image_raw
+      Name: Camera
+      Overlay Alpha: 0.6000000238418579
+      Queue Size: 2
+      Transport Hint: compressed
+      Unreliable: false
+      Value: false
+      Visibility:
+        "": true
+        Grid 1m: true
+        Grid 5m: true
+        Image: true
+        Marker: true
+        Path: true
+        RobotModel: false
+        TF: false
+        Value: true
+        all tracks: true
+        detection:
+          Ouster FOV: true
+          Value: true
+          apriori background: false
+          background pc: true
+          clusters: true
+          detections pc: true
+          frontiers: true
+          lidar raycast: true
+          oparea: false
+          separate bg clusters removal: true
+          sure air: true
+          update flags: true
+          voxel map: true
+        eagle odom: false
+        external detections: true
+        interceptor dbg_traj: false
+        main frame: true
+        mpc tracker debug: true
+        mpc_tracker dbg_traj: false
+        pc filtering:
+          Value: true
+          fitted plane: true
+          raw pc: true
+          self pc: false
+          target pc: true
+        rtk frame: true
+        safety area: true
+        self-localization:
+          "": true
+          Value: true
+        setpoint trajectory: true
+        target frame: true
+        tracked target: true
+        uav1:
+          Value: true
+          mpc_tracker dbg_traj: true
+          target1 odom: true
+        uav2:
+          Value: true
+          mpc_tracker dbg_traj: true
+          target2 odom: true
+        uav3:
+          Value: true
+          mpc_tracker dbg_traj: true
+          target3 odom: true
+      Zoom Factor: 1
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /uav91/uav_detection/update_flags
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /uav91/uav_detection/lidar_fov
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        uav91/fcu:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uav91/fcu/arms:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uav91/fcu/arms_red:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uav91/fcu/props:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        uav91/fcu/uav_marker:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      Robot Description: uav91/robot_model
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 255; 0; 0
+      Enabled: true
+      Head Diameter: 0.09000000357627869
+      Head Length: 0.10000000149011612
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 0; 0
+      Pose Style: Arrows
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.029999999329447746
+      Shaft Length: 0.10000000149011612
+      Topic: /uav91/lidar_tracker/tracked_drone_prediction
+      Unreliable: false
+      Value: true
+    - Class: rviz/Group
+      Displays:
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: false
+          Enabled: true
+          Keep: 1
+          Name: target1 odom
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 50
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /uav1/odometry/odom_main
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Arrow Length: 0.800000011920929
+          Axes Length: 0.30000001192092896
+          Axes Radius: 0.009999999776482582
+          Class: rviz/PoseArray
+          Color: 255; 0; 0
+          Enabled: true
+          Head Length: 0.20999999344348907
+          Head Radius: 0.09000000357627869
+          Name: mpc_tracker dbg_traj
+          Queue Size: 10
+          Shaft Length: 0.5
+          Shaft Radius: 0.029999999329447746
+          Shape: Arrow (3D)
+          Topic: /uav1/control_manager/mpc_tracker/trajectory_processed/poses
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: uav1
+    - Class: rviz/Group
+      Displays:
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: false
+          Enabled: true
+          Keep: 1
+          Name: target2 odom
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 50
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /uav2/odometry/odom_main
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Arrow Length: 0.800000011920929
+          Axes Length: 0.30000001192092896
+          Axes Radius: 0.009999999776482582
+          Class: rviz/PoseArray
+          Color: 0; 255; 0
+          Enabled: true
+          Head Length: 0.20999999344348907
+          Head Radius: 0.09000000357627869
+          Name: mpc_tracker dbg_traj
+          Queue Size: 10
+          Shaft Length: 0.5
+          Shaft Radius: 0.029999999329447746
+          Shape: Arrow (3D)
+          Topic: /uav2/control_manager/mpc_tracker/trajectory_processed/poses
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: uav2
+    - Class: rviz/Group
+      Displays:
+        - Angle Tolerance: 0.10000000149011612
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: false
+          Enabled: true
+          Keep: 1
+          Name: target3 odom
+          Position Tolerance: 0.10000000149011612
+          Queue Size: 50
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.10000000149011612
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /uav3/odometry/odom_main
+          Unreliable: false
+          Value: true
+        - Alpha: 1
+          Arrow Length: 0.800000011920929
+          Axes Length: 0.30000001192092896
+          Axes Radius: 0.009999999776482582
+          Class: rviz/PoseArray
+          Color: 0; 0; 255
+          Enabled: true
+          Head Length: 0.20999999344348907
+          Head Radius: 0.09000000357627869
+          Name: mpc_tracker dbg_traj
+          Queue Size: 10
+          Shaft Length: 0.5
+          Shaft Radius: 0.029999999329447746
+          Shape: Arrow (3D)
+          Topic: /uav3/control_manager/mpc_tracker/trajectory_processed/poses
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: uav3
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /uav91/eagle_track/tracker_front
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 100; 100; 100
+    Default Light: true
+    Fixed Frame: uav91/ground_truth_origin
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetInitialPose
+      Theta std deviation: 0.2617993950843811
+      Topic: /initialpose
+      X std deviation: 0.5
+      Y std deviation: 0.5
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz/XYOrbit
+      Distance: 9.420900344848633
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0.911813497543335
+        Y: 29.619903564453125
+        Z: 0.5188068747520447
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.43979647755622864
+      Target Frame: <Fixed Frame>
+      Yaw: 1.6732783317565918
+    Saved: ~
+Window Geometry:
+  Camera:
+    collapsed: false
+  Displays:
+    collapsed: false
+  Height: 1016
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Image:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000002c30000035afc0200000012fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000185000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006502000000000000014900000280000001e0fb0000000a0049006d00610067006502000001a5000001d60000083c0000025cfb0000000a0049006d0061006700650000000455000000d80000000000000000fb0000000a0049006d0061006700650200000b1000000195000005ba00000379fb0000000a0049006d006100670065020000085e000000ef000008ed000000f4fb0000000a0049006d0061006700650200000360000001640000059000000362fb0000000a0049006d006100670065030000002e00000091000003d800000299fb0000000c00430061006d00650072006102000000000000002800000280000001e0fb0000000c00430061006d00650072006102000000b9000000c1000002d300000213fb0000000a0049006d00610067006501000001c8000001cf0000001600ffffff00000001000001e1000004f2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000004f2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d0065010000000000000780000003bd00fffffffb0000000800540069006d00650100000000000004500000000000000000000004b70000035a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: true
+  Width: 1920
+  X: 0
+  Y: 27
