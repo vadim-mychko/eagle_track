@@ -133,9 +133,12 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   // | --------- transform the pointcloud to the camera frame -------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
 
+  double cam_width = front_model_.fullResolution().width;
+  double cam_height = front_model_.fullResolution().height;
+
   // variables for creating bounding box to return
-  double min_x = front_model_.fullResolution().width;
-  double min_y = front_model_.fullResolution().height;
+  double min_x = cam_width;
+  double min_y = cam_height;
   double max_x = 0.0;
   double max_y = 0.0;
 
@@ -147,19 +150,20 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
     // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
     cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
 
-    // Update bounding box coordinates
-    min_x = std::min(min_x, pt2d_unrec.x);
-    min_y = std::min(min_y, pt2d_unrec.y);
-    max_x = std::max(max_x, pt2d_unrec.x);
-    max_y = std::max(max_y, pt2d_unrec.y); 
+    // check if the point is inside the camera frame
+    if (min_x >= 0 && max_x < cam_width && min_y >= 0 && max_y < cam_height) {
+      // Update bounding box coordinates
+      min_x = std::min(min_x, pt2d_unrec.x);
+      min_y = std::min(min_y, pt2d_unrec.y);
+      max_x = std::max(max_x, pt2d_unrec.x);
+      max_y = std::max(max_y, pt2d_unrec.y); 
+    }
   }
 
-  min_x = std::max(min_x, 0.0);
-  min_y = std::max(min_y, 0.0);
-  max_x = std::min(max_x, static_cast<double>(front_model_.fullResolution().width));
-  max_y = std::max(max_y, static_cast<double>(front_model_.fullResolution().height));
+  double width = max_x - min_x;
+  double height = max_y - min_y;
 
-  return cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+  return width > 0 && height > 0 ? cv::Rect2d(min_x, min_y, width, height) : cv::Rect2d();
 }
 
 } // namespace eagle_track
