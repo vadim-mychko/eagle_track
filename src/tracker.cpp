@@ -150,8 +150,9 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
     // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
     cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
 
-    // check if the point is inside the camera frame
-    if (min_x >= 0 && max_x < cam_width && min_y >= 0 && max_y < cam_height) {
+    // check if the projected point is inside the camera frame
+    if (pt2d_unrec.x >= 0 && pt2d_unrec.x < cam_width
+          && pt2d_unrec.y >= 0 && pt2d_unrec.y < cam_height) {
       // Update bounding box coordinates
       min_x = std::min(min_x, pt2d_unrec.x);
       min_y = std::min(min_y, pt2d_unrec.y);
