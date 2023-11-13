@@ -62,7 +62,7 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
     // to draw into the image. Therefore we need to copy it.
     cv::Mat track_image;
     image.copyTo(track_image);
-    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0));
+    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
 
     publishFront(track_image, msg->header, encoding);
     NODELET_INFO_THROTTLE(1.0, "[Tracker]: Front tracker update succeeded");
@@ -90,7 +90,11 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
   for (auto track : msg->tracks) {
     if (track.selected) {
       track.points.header = msg->header;
-      last_detection_ = transformAndProject(track.points);
+      cv::Rect2d detection = transformAndProject(track.points);
+      if (detection != cv::Rect2d()) {
+        last_detection_ = detection;
+      }
+
       NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Projected the cloudpoint onto " << last_detection_);
       break;
     }
@@ -120,9 +124,6 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   pcl::fromROSMsg(points, cloud);
 
   NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Received " << cloud.points.size() << " points from the detection");
-  if (cloud.points.size() < 2) {
-    return cv::Rect2d();
-  }
 
   // | --------- get the transformation from to the camera frame -------- |
   auto ret = transformer_->getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
