@@ -30,9 +30,9 @@ void Tracker::onInit() {
   pub_front_ = it.advertise("tracker_front", 1);
 
   // | --------------------- tf transformer --------------------- |
-  transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
-  transformer_->setDefaultPrefix(_uav_name_);
-  transformer_->retryLookupNewest(true);
+  transformer_ = mrs_lib::Transformer("Tracker");
+  transformer_.setDefaultPrefix(_uav_name_);
+  transformer_.retryLookupNewest(true);
 
   initialized_ = true;
   NODELET_INFO_ONCE("[Tracker]: Initialized");
@@ -89,7 +89,6 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      track.points.header = msg->header;
       transformAndProject(track.points);
       break;
     }
@@ -114,18 +113,16 @@ void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
     return;
   }
 
-  // Convert PointCloud2 to pcl::PointCloud
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::fromROSMsg(points, cloud);
-
-  NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Received " << cloud.points.size() << " points from the detection");
-
   // | --------- get the transformation from to the camera frame -------- |
-  auto ret = transformer_->getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
+  auto ret = transformer_.getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
     return;
   }
+
+  // Convert PointCloud2 to pcl::PointCloud
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(points, cloud);
 
   // | --------- transform the pointcloud to the camera frame -------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);

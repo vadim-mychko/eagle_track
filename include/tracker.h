@@ -58,7 +58,7 @@ private:
   cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
 
   // | -------------------- point projection -------------------- |
-  std::unique_ptr<mrs_lib::Transformer> transformer_;
+  mrs_lib::Transformer transformer_;
   void transformAndProject(const sensor_msgs::PointCloud2& points);
 };
 
