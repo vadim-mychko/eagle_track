@@ -44,7 +44,7 @@ struct CameraContext {
   // | -------------------- tracker essentials -------------------- |
   cv::Rect2d detection;
   image_geometry::PinholeCameraModel model;
-  cv::Ptr<cv::Tracker> tracker = cv::TrackerKCF::create();
+  cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
 
   CameraContext(const std::string& name);
 };
