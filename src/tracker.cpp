@@ -78,10 +78,8 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
 
     publishImage(track_image, msg->header, encoding, cc);
-    NODELET_INFO_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Tracker update succeeded");
   } else {
     publishImage(image, msg->header, encoding, cc);
-    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Tracker update failed");
   }
 }
 
