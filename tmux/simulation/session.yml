@@ -24,7 +24,7 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-32 --use-gpu-ray --horizontal-samples 1024 --rotation-freq 10"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-128 --use-gpu-ray --horizontal-samples 1024 --rotation-freq 10"
         - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --enable-rangefinder --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-ground-truth"
   - hw_api:
       layout: tiled
@@ -67,7 +67,7 @@ windows:
   - detect:
       layout: tiled
       panes:
-        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=$TRACK_PATH/masks/os1_v32h1024_sim.png apriori_map_filename:=$DETECT_PATH/data/cisarsky_ostrov.xyz apriori_map_config_filename:=$DETECT_PATH/config/apriori_maps/sim.yaml sensor_config_filename:=$DETECT_PATH/config/sensors/os1-32.yaml
+        - waitForControl; roslaunch uav_detect detect.launch world_frame_id:=$UAV_NAME/world_origin mask_filename:=$TRACK_PATH/masks/os1_v128h1024_sim.png apriori_map_filename:=$DETECT_PATH/data/cisarsky_ostrov.xyz apriori_map_config_filename:=$DETECT_PATH/config/apriori_maps/sim.yaml sensor_config_filename:=$DETECT_PATH/config/sensors/os1-128.yaml
         - waitForControl; roslaunch lidar_tracker lidar_tracker.launch world_frame_id:=$UAV_NAME/world_origin
   - track:
       layout: tiled
