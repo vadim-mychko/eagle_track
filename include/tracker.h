@@ -82,7 +82,7 @@ private:
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;
-  void transformAndProject(const sensor_msgs::PointCloud2& points, CameraContext& cc);
+  void updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc);
 };
 
 } // namespace eagle_track

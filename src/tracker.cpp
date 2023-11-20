@@ -110,8 +110,8 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      transformAndProject(track.points, front);
-      transformAndProject(track.points, down);
+      updateDetection(track.points, front);
+      updateDetection(track.points, down);
       break;
     }
   }
@@ -129,7 +129,7 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   cc.pub_image.publish(out_msg);
 }
 
-void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
+void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
   if (!cc.got_info) {
     NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;
