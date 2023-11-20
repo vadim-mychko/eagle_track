@@ -6,7 +6,7 @@ attach: false
 tmux_options: -f /etc/ctu-mrs/tmux.conf
 # you can modify these
 pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; export DETECT_PATH=`rospack find uav_detect`; export EAGLE_PATH=`rospack find eagle_gazebo_resources`; export TRACK_PATH=`rospack find eagle_track`
-startup_window: detect
+startup_window: track
 windows:
   - roscore:
       layout: tiled
