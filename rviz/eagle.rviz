@@ -7,10 +7,12 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /eagle odom1/Shape1
+        - /pc filtering1
+        - /pc filtering1/raw pc1
         - /tracked target1/Covariance1/Position1
         - /all tracks1/Covariance1
         - /all tracks1/Covariance1/Position1
-        - /uav21
+        - /filtered_points1
       Splitter Ratio: 0.32765957713127136
     Tree Height: 797
   - Class: rviz/Selection
@@ -240,7 +242,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
-      Enabled: true
+      Enabled: false
       Name: pc filtering
     - Class: rviz/Group
       Displays:
@@ -359,7 +361,7 @@ Visualization Manager:
           Marker Topic: /uav91/uav_detection/operation_area
           Name: oparea
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -444,7 +446,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
-      Enabled: true
+      Enabled: false
       Name: detection
     - Class: rviz/Group
       Displays:
@@ -872,6 +874,34 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 0
+      Min Color: 255; 255; 0
+      Name: filtered_points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.05000000074505806
+      Style: Spheres
+      Topic: /uav91/lidar_tracker/filtered_points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 100; 100; 100
@@ -900,7 +930,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 11.23289680480957
+      Distance: 6.611053943634033
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -908,17 +938,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.8019931316375732
-        Y: 29.16745948791504
-        Z: 0.5188063979148865
+        X: -0.5029336214065552
+        Y: 30.443044662475586
+        Z: 0.518806517124176
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3997965157032013
+      Pitch: -0.04020322486758232
       Target Frame: <Fixed Frame>
-      Yaw: 1.913278341293335
+      Yaw: 6.202814102172852
     Saved: ~
 Window Geometry:
   Displays:
