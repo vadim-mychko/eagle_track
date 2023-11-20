@@ -3,6 +3,8 @@
 namespace eagle_track
 {
 
+CameraContext::CameraContext(const std::string& name) : name(name) {}
+
 void Tracker::onInit() {
   ros::NodeHandle nh = nodelet::Nodelet::getMTPrivateNodeHandle();
 
@@ -22,12 +24,15 @@ void Tracker::onInit() {
   image_transport::ImageTransport it(nh);
 
   // | ---------------------- subscribers --------------------- |
-  sub_front_ = it.subscribe("camera_front", 1, &Tracker::callbackFront, this);
-  sub_front_info_ = nh.subscribe("camera_front_info", 1, &Tracker::callbackFrontInfo, this);
+  front.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this);
+  down.sub_image = it.subscribe("camera_down", 1, &Tracker::callbackImageDown, this);
+  front.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
+  down.sub_info = nh.subscribe("camera_down_info", 1, &Tracker::callbackCameraInfoDown, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
-  pub_front_ = it.advertise("tracker_front", 1);
+  front.pub_image = it.advertise("tracker_front", 1);
+  down.pub_image = it.advertise("tracker_down", 1);
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
@@ -38,7 +43,15 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
-void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
+void Tracker::callbackImageFront(const sensor_msgs::ImageConstPtr& msg) {
+  callbackImage(msg, front);
+}
+
+void Tracker::callbackImageDown(const sensor_msgs::ImageConstPtr& msg) {
+  callbackImage(msg, down);
+}
+
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
@@ -48,13 +61,13 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
-  bool success = front_tracker_->update(image, bbox);
+  bool success = cc.tracker->update(image, bbox);
 
   // if could not update tracker, try re-initialize it with the latest detection
   if (!success
-        && (bbox = last_detection_) != cv::Rect2d()
-        && !(success = front_tracker_->init(image, bbox))) {
-    NODELET_WARN_STREAM_THROTTLE(1.0, "[Tracker]: Reinitialization failed with " << bbox);
+        && (bbox = cc.detection) != cv::Rect2d()
+        && !(success = cc.tracker->init(image, bbox))) {
+    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Reinitialization failed with " << bbox);
   }
 
   if (success) {
@@ -64,22 +77,30 @@ void Tracker::callbackFront(const sensor_msgs::ImageConstPtr& msg) {
     image.copyTo(track_image);
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
 
-    publishFront(track_image, msg->header, encoding);
-    NODELET_INFO_THROTTLE(1.0, "[Tracker]: Front tracker update succeeded");
+    publishImage(track_image, msg->header, encoding, cc);
+    NODELET_INFO_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Tracker update succeeded");
   } else {
-    publishFront(image, msg->header, encoding);
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Front tracker update failed");
+    publishImage(image, msg->header, encoding, cc);
+    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Tracker update failed");
   }
 }
 
-void Tracker::callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
+void Tracker::callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg) {
+  callbackCameraInfo(msg, front);
+}
+
+void Tracker::callbackCameraInfoDown(const sensor_msgs::CameraInfoConstPtr& msg) {
+  callbackCameraInfo(msg, down);
+}
+
+void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
 
-  got_front_info_ = true;
-  front_model_.fromCameraInfo(*msg);
-  NODELET_INFO_ONCE("[Tracker]: Initialized front camera info");
+  cc.got_info = true;
+  cc.model.fromCameraInfo(*msg);
+  NODELET_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
 }
 
 void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
@@ -89,13 +110,14 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      transformAndProject(track.points);
+      transformAndProject(track.points, front);
+      transformAndProject(track.points, down);
       break;
     }
   }
 }
 
-void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding) {
+void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc) {
   // Prepare a cv_bridge image to be converted to the ROS message
   cv_bridge::CvImage bridge_image_out;
   bridge_image_out.image = image.getMat();
@@ -104,19 +126,19 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
 
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-  pub_front_.publish(out_msg);
+  cc.pub_image.publish(out_msg);
 }
 
-void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
-  if (!got_front_info_) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
+void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
+  if (!cc.got_info) {
+    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;
   }
 
   // | --------- get the transformation from to the camera frame -------- |
-  auto ret = transformer_.getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
+  auto ret = transformer_.getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
-    NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
+    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;
   }
 
@@ -127,8 +149,8 @@ void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
   // | --------- transform the pointcloud to the camera frame -------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
 
-  double cam_width = front_model_.fullResolution().width;
-  double cam_height = front_model_.fullResolution().height;
+  double cam_width = cc.model.fullResolution().width;
+  double cam_height = cc.model.fullResolution().height;
 
   // variables for creating bounding box to return
   double min_x = cam_width;
@@ -138,11 +160,11 @@ void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
 
   for (const pcl::PointXYZ& point : cloud.points) {
     // | ----------- backproject the point from 3D to 2D ---------- |
-    cv::Point2d pt2d = front_model_.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
+    cv::Point2d pt2d = cc.model.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
     // | ----------- unrectify the 2D point coordinates ----------- |
     // This is done to correct for camera distortion. IT has no effect in simulation, where the camera model
     // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
-    cv::Point2d pt2d_unrec = front_model_.unrectifyPoint(pt2d);
+    cv::Point2d pt2d_unrec = cc.model.unrectifyPoint(pt2d);
 
     // check if the projected point is inside the camera frame
     if (pt2d_unrec.x >= 0 && pt2d_unrec.x < cam_width
@@ -159,7 +181,7 @@ void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
   double height = max_y - min_y;
 
   if (width > 0 && height > 0) {
-    last_detection_ = cv::Rect2d(min_x, min_y, width, height);
+    cc.detection = cv::Rect2d(min_x, min_y, width, height);
   }
 }
 

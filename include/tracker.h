@@ -24,6 +24,31 @@
 namespace eagle_track
 {
 
+// structure for holding all the information relevant to camera model, projected detection,
+// tracker, subscribers and publishers
+// callbacks are implemented in the Tracker class with corresponding camera context
+struct CameraContext {
+  // | ---------------------- flags --------------------- |
+  bool got_info = false;
+
+  // | ---------------------- parameters --------------------- |
+  std::string name;
+
+  // | ---------------------- subscribers --------------------- |
+  image_transport::Subscriber sub_image;
+  ros::Subscriber sub_info;
+
+  // | ---------------------- publishers --------------------- |
+  image_transport::Publisher pub_image;
+
+  // | -------------------- tracker essentials -------------------- |
+  cv::Rect2d detection;
+  image_geometry::PinholeCameraModel model;
+  cv::Ptr<cv::Tracker> tracker = cv::TrackerKCF::create();
+
+  CameraContext(const std::string& name);
+};
+
 class Tracker : public nodelet::Nodelet {
 
 public:
@@ -33,33 +58,31 @@ public:
 private:
   // | ---------------------- flags --------------------- |
   bool initialized_ = false;
-  bool got_front_info_ = false;
 
   // | ---------------------- ros parameters --------------------- |
   std::string _uav_name_;
 
   // | ---------------------- subscribers --------------------- |
-  image_transport::Subscriber sub_front_;
-  ros::Subscriber sub_front_info_;
   ros::Subscriber sub_detections_;
 
-  void callbackFront(const sensor_msgs::ImageConstPtr& msg);
-  void callbackFrontInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackImageFront(const sensor_msgs::ImageConstPtr& msg);
+  void callbackImageDown(const sensor_msgs::ImageConstPtr& msg);
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);
+  void callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackCameraInfoDown(const sensor_msgs::CameraInfoConstPtr& msg);
+  void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
   void callbackDetections(const lidar_tracker::TracksConstPtr& msg);
 
   // | ---------------------- publishers --------------------- |
-  image_transport::Publisher pub_front_;
-
-  void publishFront(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding);
+  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
 
   // | -------------------- tracker essentials -------------------- |
-  cv::Rect2d last_detection_;
-  image_geometry::PinholeCameraModel front_model_;
-  cv::Ptr<cv::Tracker> front_tracker_ = cv::TrackerKCF::create();
+  CameraContext front = CameraContext("FrontCamera");
+  CameraContext down = CameraContext("DownCamera");
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;
-  void transformAndProject(const sensor_msgs::PointCloud2& points);
+  void transformAndProject(const sensor_msgs::PointCloud2& points, CameraContext& cc);
 };
 
 } // namespace eagle_track
