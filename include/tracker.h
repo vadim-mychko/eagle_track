@@ -59,7 +59,7 @@ private:
 
   // | -------------------- point projection -------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_;
-  cv::Rect2d transformAndProject(const sensor_msgs::PointCloud2& points);
+  void transformAndProject(const sensor_msgs::PointCloud2& points);
 };
 
 } // namespace eagle_track

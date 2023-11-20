@@ -90,12 +90,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
   for (auto track : msg->tracks) {
     if (track.selected) {
       track.points.header = msg->header;
-      cv::Rect2d detection = transformAndProject(track.points);
-      if (detection != cv::Rect2d()) {
-        last_detection_ = detection;
-      }
-
-      NODELET_INFO_STREAM_THROTTLE(1.0, "[Tracker]: Projected the cloudpoint onto " << last_detection_);
+      transformAndProject(track.points);
       break;
     }
   }
@@ -113,10 +108,10 @@ void Tracker::publishFront(cv::InputArray image, const std_msgs::Header& header,
   pub_front_.publish(out_msg);
 }
 
-cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
+void Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) {
   if (!got_front_info_) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
-    return cv::Rect2d();
+    return;
   }
 
   // Convert PointCloud2 to pcl::PointCloud
@@ -129,7 +124,7 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   auto ret = transformer_->getTransform(points.header.frame_id, front_model_.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
     NODELET_WARN_THROTTLE(1.0, "[Tracker]: Failed to transform the pointcloud to the camera frame");
-    return cv::Rect2d();
+    return;
   }
 
   // | --------- transform the pointcloud to the camera frame -------- |
@@ -166,7 +161,9 @@ cv::Rect2d Tracker::transformAndProject(const sensor_msgs::PointCloud2& points) 
   double width = max_x - min_x;
   double height = max_y - min_y;
 
-  return width > 0 && height > 0 ? cv::Rect2d(min_x, min_y, width, height) : cv::Rect2d();
+  if (width > 0 && height > 0) {
+    last_detection_ = cv::Rect2d(min_x, min_y, width, height);
+  }
 }
 
 } // namespace eagle_track
