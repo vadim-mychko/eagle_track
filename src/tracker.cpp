@@ -24,15 +24,15 @@ void Tracker::onInit() {
   image_transport::ImageTransport it(nh);
 
   // | ---------------------- subscribers --------------------- |
-  front.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this);
-  down.sub_image = it.subscribe("camera_down", 1, &Tracker::callbackImageDown, this);
-  front.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
-  down.sub_info = nh.subscribe("camera_down_info", 1, &Tracker::callbackCameraInfoDown, this);
+  front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this);
+  down_.sub_image = it.subscribe("camera_down", 1, &Tracker::callbackImageDown, this);
+  front_.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
+  down_.sub_info = nh.subscribe("camera_down_info", 1, &Tracker::callbackCameraInfoDown, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
-  front.pub_image = it.advertise("tracker_front", 1);
-  down.pub_image = it.advertise("tracker_down", 1);
+  front_.pub_image = it.advertise("tracker_front", 1);
+  down_.pub_image = it.advertise("tracker_down", 1);
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
@@ -44,11 +44,11 @@ void Tracker::onInit() {
 }
 
 void Tracker::callbackImageFront(const sensor_msgs::ImageConstPtr& msg) {
-  callbackImage(msg, front);
+  callbackImage(msg, front_);
 }
 
 void Tracker::callbackImageDown(const sensor_msgs::ImageConstPtr& msg) {
-  callbackImage(msg, down);
+  callbackImage(msg, down_);
 }
 
 void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
@@ -56,17 +56,26 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
+  cc.buffer.push_back(msg);
+
   const std::string encoding = "bgr8";
-  const cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::InputArray image = bridge_image_ptr->image;
 
   cv::Rect2d bbox;
-  bool success = cc.tracker->update(image, bbox);
+  bool success = true;
+  bool shouldInit = !cc.tracker->update(image, bbox);
+  if (shouldInit) {
+    ros::Time stamp;
+    {
+      std::lock_guard<std::mutex> lock(cc.mutex);
+      bbox = cc.detection;
+      stamp = cc.stamp;
+    }
+    success = bbox != cv::Rect2d() && initContext(cc, bbox, stamp);
+  }
 
-  // if could not update tracker, try re-initialize it with the latest detection
-  if (!success
-        && (bbox = cc.detection) != cv::Rect2d()
-        && !(success = cc.tracker->init(image, bbox))) {
+  if (shouldInit && !success) {
     NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Reinitialization failed with " << bbox);
   }
 
@@ -76,7 +85,6 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     cv::Mat track_image;
     image.copyTo(track_image);
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
-
     publishImage(track_image, msg->header, encoding, cc);
   } else {
     publishImage(image, msg->header, encoding, cc);
@@ -84,15 +92,15 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 }
 
 void Tracker::callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg) {
-  callbackCameraInfo(msg, front);
+  callbackCameraInfo(msg, front_);
 }
 
 void Tracker::callbackCameraInfoDown(const sensor_msgs::CameraInfoConstPtr& msg) {
-  callbackCameraInfo(msg, down);
+  callbackCameraInfo(msg, down_);
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
-  if (!initialized_) {
+  if (!initialized_ || cc.got_info) {
     return;
   }
 
@@ -108,8 +116,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
 
   for (auto track : msg->tracks) {
     if (track.selected) {
-      updateDetection(track.points, front);
-      updateDetection(track.points, down);
+      updateDetection(track.points, front_);
       break;
     }
   }
@@ -125,6 +132,36 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   cc.pub_image.publish(out_msg);
+}
+
+bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp) {
+  if (cc.buffer.empty()) {
+    return false;
+  }
+
+  // find the closest image in terms of timestamps
+  double target = stamp.toSec();
+  auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    [&target](const sensor_msgs::ImageConstPtr& a, const sensor_msgs::ImageConstPtr& b) {
+      return std::abs(a->header.stamp.toSec() - target) < std::abs(b->header.stamp.toSec() - target);
+  });
+
+  // reinitialize our tracker with the found image frame with the closest timestamp and bounding box
+  const std::string encoding = "bgr8";
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(*closest, encoding);
+  bool success = cc.tracker->init(bridge_image_ptr->image, bbox);
+
+  // iterate over all other images and update our tracker
+  for (auto it = closest + 1; it != cc.buffer.end(); ++it) {
+    if (!success) { 
+      break;
+    }
+
+    bridge_image_ptr = cv_bridge::toCvShare(*it, encoding);
+    success = cc.tracker->update(bridge_image_ptr->image, bbox);
+  }
+
+  return success;
 }
 
 void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
@@ -179,7 +216,9 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double height = max_y - min_y;
 
   if (width > 0 && height > 0) {
+    std::lock_guard<std::mutex> lock(cc.mutex);
     cc.detection = cv::Rect2d(min_x, min_y, width, height);
+    cc.stamp = points.header.stamp;
   }
 }
 

@@ -21,6 +21,9 @@
 // UAV detection custom messages
 #include <lidar_tracker/Tracks.h>
 
+// general boost useful things
+#include <boost/circular_buffer.hpp>
+
 namespace eagle_track
 {
 
@@ -29,10 +32,23 @@ namespace eagle_track
 // callbacks are implemented in the Tracker class with corresponding camera context
 struct CameraContext {
   // | ---------------------- flags --------------------- |
-  bool got_info = false;
+  bool got_info = false; // whether got camera info for point projection
 
-  // | ---------------------- parameters --------------------- |
-  std::string name;
+  // | ---------------------- struct parameters --------------------- |
+  std::string name; // name of the camera context
+  cv::Rect2d detection; // bounding box from the latest detection 
+  ros::Time stamp; // timestamp of the bounding box from the latest detection
+  image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
+
+  // buffer for storing latest number of images for initializing the tracker with the bounding box
+  // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
+  boost::circular_buffer<sensor_msgs::ImageConstPtr> buffer = boost::circular_buffer<sensor_msgs::ImageConstPtr>(30);
+  // what tracker to use, in the future might add as an argument to the constructor
+  cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
+
+  // mutex to ensure thread safety
+  // also servers as a tool to read "atomically" several variables at once: detection, stamp
+  std::mutex mutex;
 
   // | ---------------------- subscribers --------------------- |
   image_transport::Subscriber sub_image;
@@ -40,11 +56,6 @@ struct CameraContext {
 
   // | ---------------------- publishers --------------------- |
   image_transport::Publisher pub_image;
-
-  // | -------------------- tracker essentials -------------------- |
-  cv::Rect2d detection;
-  image_geometry::PinholeCameraModel model;
-  cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
 
   CameraContext(const std::string& name);
 };
@@ -77,8 +88,10 @@ private:
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
 
   // | -------------------- tracker essentials -------------------- |
-  CameraContext front = CameraContext("FrontCamera");
-  CameraContext down = CameraContext("DownCamera");
+  CameraContext front_ = CameraContext("FrontCamera");
+  CameraContext down_ = CameraContext("DownCamera");
+
+  bool initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp);
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;
