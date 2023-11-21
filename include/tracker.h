@@ -85,7 +85,10 @@ private:
   void callbackDetections(const lidar_tracker::TracksConstPtr& msg);
 
   // | ---------------------- publishers --------------------- |
+  image_transport::Publisher pub_projections_;
+
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
+  void publishProjections(const std::vector<cv::Point2d>& projections, const CameraContext& cc);
 
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");

@@ -30,6 +30,7 @@ void Tracker::onInit() {
 
   // | ---------------------- publishers --------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
+  pub_projections_ = it.advertise("projections", 1);
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
@@ -131,6 +132,33 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   cc.pub_image.publish(out_msg);
 }
 
+void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, const CameraContext& cc) {
+  if (cc.buffer.empty()) {
+    return;
+  }
+
+  double target = cc.stamp.toSec();
+  auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    [&target](const sensor_msgs::ImageConstPtr& a, const sensor_msgs::ImageConstPtr& b) {
+      return std::abs(a->header.stamp.toSec() - target) < std::abs(b->header.stamp.toSec() - target);
+  });
+
+  const std::string encoding = "bgr8";
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(*closest, encoding);
+  cv::Mat project_image;
+  bridge_image_ptr->image.copyTo(project_image);
+
+  for (const cv::Point2d& point : projections) {
+    cv::circle(project_image, point, 5, cv::Scalar(0, 0, 255), -1);
+  }
+
+  cv_bridge::CvImage bridge_image_out;
+  bridge_image_out.image = project_image;
+  bridge_image_out.encoding = encoding;
+  sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
+  pub_projections_.publish(out_msg);
+}
+
 bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp) {
   if (cc.buffer.empty()) {
     return false;
@@ -190,6 +218,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double max_x = 0.0;
   double max_y = 0.0;
 
+  std::vector<cv::Point2d> projections;
   for (const pcl::PointXYZ& point : cloud.points) {
     // | ----------- backproject the point from 3D to 2D ---------- |
     cv::Point2d pt2d = cc.model.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
@@ -205,7 +234,9 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
       min_x = std::min(min_x, pt2d_unrec.x);
       min_y = std::min(min_y, pt2d_unrec.y);
       max_x = std::max(max_x, pt2d_unrec.x);
-      max_y = std::max(max_y, pt2d_unrec.y); 
+      max_y = std::max(max_y, pt2d_unrec.y);
+
+      projections.push_back(pt2d_unrec);
     }
   }
 
@@ -216,6 +247,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
     std::lock_guard<std::mutex> lock(cc.mutex);
     cc.detection = cv::Rect2d(min_x, min_y, width, height);
     cc.stamp = points.header.stamp;
+    publishProjections(projections, cc);
   }
 }
 
