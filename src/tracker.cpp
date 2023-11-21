@@ -137,14 +137,8 @@ void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, co
     return;
   }
 
-  double target = cc.stamp.toSec();
-  auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const sensor_msgs::ImageConstPtr& a, const sensor_msgs::ImageConstPtr& b) {
-      return std::abs(a->header.stamp.toSec() - target) < std::abs(b->header.stamp.toSec() - target);
-  });
-
   const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(*closest, encoding);
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(cc.buffer.back(), encoding);
   cv::Mat project_image;
   bridge_image_ptr->image.copyTo(project_image);
 
