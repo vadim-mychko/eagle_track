@@ -95,6 +95,7 @@ private:
   CameraContext down_ = CameraContext("DownCamera");
 
   bool initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp);
+  cv::Rect2d scaleRect(const cv::Rect2d& rect, double width_factor, double height_factor, const CameraContext& cc);
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;

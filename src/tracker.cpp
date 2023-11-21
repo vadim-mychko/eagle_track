@@ -70,7 +70,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
       bbox = cc.detection;
       stamp = cc.stamp;
     }
-    success = bbox != cv::Rect2d() && initContext(cc, bbox, stamp);
+    success = initContext(cc, bbox, stamp);
   }
 
   if (shouldInit && !success) {
@@ -154,9 +154,12 @@ void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, co
 }
 
 bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp) {
-  if (cc.buffer.empty()) {
+  if (cc.buffer.empty() || bbox == cv::Rect2d()) {
     return false;
   }
+
+  // make bounding box bigger by some specified factors
+  bbox = scaleRect(bbox, 2.5, 8.0, cc);
 
   // find the closest image in terms of timestamps
   double target = stamp.toSec();
@@ -181,6 +184,23 @@ bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& 
   }
 
   return success;
+}
+
+cv::Rect2d Tracker::scaleRect(const cv::Rect2d& rect, double width_factor, double height_factor, const CameraContext& cc) {
+  double cam_width = cc.model.fullResolution().width;
+  double cam_height = cc.model.fullResolution().height;
+
+  double new_width = rect.width * width_factor;
+  double new_height = rect.height * height_factor;
+  double diff_width = new_width - rect.width;
+  double diff_height = new_height - rect.height;
+
+  double new_x = std::max(0.0, rect.x - diff_width / 2);
+  double new_y = std::max(0.0, rect.y - diff_height / 2);
+  new_width = std::min(cam_width - new_x, new_width);
+  new_height = std::min(cam_height - new_y, new_height);
+
+  return cv::Rect2d(new_x, new_y, new_width, new_height);
 }
 
 void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
