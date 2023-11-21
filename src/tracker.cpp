@@ -247,8 +247,9 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
     std::lock_guard<std::mutex> lock(cc.mutex);
     cc.detection = cv::Rect2d(min_x, min_y, width, height);
     cc.stamp = points.header.stamp;
-    publishProjections(projections, cc);
   }
+
+  publishProjections(projections, cc);
 }
 
 } // namespace eagle_track
