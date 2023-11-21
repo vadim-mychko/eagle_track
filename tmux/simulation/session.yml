@@ -62,7 +62,7 @@ windows:
       layout: tiled
       panes:
         - waitForControl; rviz -d $TRACK_PATH/rviz/eagle.rviz
-        - waitForControl; roslaunch mrs_rviz_plugins load_robot.launch
+        - waitForControl; roslaunch eagle_gazebo_resources load_rviz_robot.launch
         - waitForTime; waitForControl; roslaunch mrs_rviz_plugins rviz_interface.launch
   - detect:
       layout: tiled
