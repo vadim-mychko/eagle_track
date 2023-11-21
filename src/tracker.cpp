@@ -25,14 +25,11 @@ void Tracker::onInit() {
 
   // | ---------------------- subscribers --------------------- |
   front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this);
-  down_.sub_image = it.subscribe("camera_down", 1, &Tracker::callbackImageDown, this);
   front_.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
-  down_.sub_info = nh.subscribe("camera_down_info", 1, &Tracker::callbackCameraInfoDown, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
   // | ---------------------- publishers --------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
-  down_.pub_image = it.advertise("tracker_down", 1);
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
