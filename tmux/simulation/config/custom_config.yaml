@@ -24,3 +24,5 @@ mrs_uav_managers:
         controller: "MpcController"
         # controller: "Se3Controller"
         tracker: "MpcTracker"
+
+      takeoff_height: 4.0
