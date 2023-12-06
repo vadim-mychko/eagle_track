@@ -47,7 +47,7 @@ struct CameraContext {
 
   // buffer for storing latest number of images for initializing the tracker with the bounding box
   // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
-  boost::circular_buffer<CvImageStamped> buffer = boost::circular_buffer<CvImageStamped>(30);
+  boost::circular_buffer<CvImageStamped> buffer;
   // what tracker to use, in the future might add as an argument to the constructor
   cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
 
@@ -75,8 +75,10 @@ private:
   // | ---------------------- flags --------------------- |
   bool initialized_ = false;
 
-  // | ---------------------- ros parameters --------------------- |
-  std::string _uav_name_;
+  // | ---------------------- static parameters --------------------- |
+  double _throttle_period_;
+  double _bbox_resize_width_;
+  double _bbox_resize_height_;
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;

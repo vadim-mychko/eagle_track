@@ -14,16 +14,25 @@ void Tracker::onInit() {
   // | ------------------- ros parameters ------------------ |
   mrs_lib::ParamLoader pl(nh, "Tracker");
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
-  pl.loadParam("UAV_NAME", _uav_name_);
+  const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
+  pl.loadParam("throttle_period", _throttle_period_);
+  pl.loadParam("bbox_resize_width", _bbox_resize_width_);
+  pl.loadParam("bbox_resize_height", _bbox_resize_height_);
+  const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   if (!pl.loadedSuccessfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
     ros::shutdown();
   }
 
-  image_transport::ImageTransport it(nh);
+  // | ---------------------- camera contexts --------------------- |
+  // resize buffers of camera contexts based on the provided parameter
+  front_.buffer.resize(image_buffer_size);
+  down_.buffer.resize(image_buffer_size);
 
   // | ---------------------- subscribers --------------------- |
+  image_transport::ImageTransport it(nh);
+
   front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this);
   front_.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
@@ -34,7 +43,7 @@ void Tracker::onInit() {
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
-  transformer_.setDefaultPrefix(_uav_name_);
+  transformer_.setDefaultPrefix(uav_name);
   transformer_.retryLookupNewest(true);
 
   initialized_ = true;
@@ -74,7 +83,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   }
 
   if (shouldInit && !success) {
-    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Reinitialization failed with " << bbox);
+    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Reinitialization failed with " << bbox);
   }
 
   if (success) {
@@ -154,7 +163,7 @@ bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& 
   }
 
   // make bounding box bigger by some specified factors
-  bbox = scaleRect(bbox, 2.5, 8.0, cc);
+  bbox = scaleRect(bbox, _bbox_resize_width_, _bbox_resize_height_, cc);
 
   // find the closest image in terms of timestamps
   double target = stamp.toSec();
@@ -197,14 +206,14 @@ cv::Rect2d Tracker::scaleRect(const cv::Rect2d& rect, double width_factor, doubl
 
 void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
   if (!cc.got_info) {
-    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
+    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;
   }
 
   // | --------- get the transformation from to the camera frame -------- |
   auto ret = transformer_.getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
-    NODELET_WARN_STREAM_THROTTLE(1.0, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
+    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;
   }
 

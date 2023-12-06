@@ -1,0 +1,9 @@
+# period for logging messages (in seconds)
+throttle_period: 1.0
+
+# magic constants for resizing bounding box acquired from detections
+bbox_resize_width: 2.5
+bbox_resize_height: 8.0
+
+# number of images stored in buffer for synchronization between lidar & camera
+image_buffer_size: 30
