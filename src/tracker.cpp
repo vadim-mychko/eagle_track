@@ -54,11 +54,11 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  cc.buffer.push_back(msg);
-
   const std::string encoding = "bgr8";
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
-  cv::InputArray image = bridge_image_ptr->image;
+  cv::Mat image = bridge_image_ptr->image;
+
+  cc.buffer.push_back({image, msg->header.stamp});
 
   cv::Rect2d bbox;
   bool success = true;
@@ -80,8 +80,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   if (success) {
     // cv::InputArray indicates that the variable should not be modified, but we want
     // to draw into the image. Therefore we need to copy it.
-    cv::Mat track_image;
-    image.copyTo(track_image);
+    cv::Mat track_image = image.clone();
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
     publishImage(track_image, msg->header, encoding, cc);
   } else {
@@ -137,18 +136,14 @@ void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, co
     return;
   }
 
-  const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(cc.buffer.back(), encoding);
-  cv::Mat project_image;
-  bridge_image_ptr->image.copyTo(project_image);
-
+  cv::Mat project_image = cc.buffer.back().image.clone();
   for (const cv::Point2d& point : projections) {
     cv::circle(project_image, point, 5, cv::Scalar(0, 0, 255), -1);
   }
 
   cv_bridge::CvImage bridge_image_out;
   bridge_image_out.image = project_image;
-  bridge_image_out.encoding = encoding;
+  bridge_image_out.encoding = "bgr8";
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   pub_projections_.publish(out_msg);
 }
@@ -164,14 +159,12 @@ bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& 
   // find the closest image in terms of timestamps
   double target = stamp.toSec();
   auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const sensor_msgs::ImageConstPtr& a, const sensor_msgs::ImageConstPtr& b) {
-      return std::abs(a->header.stamp.toSec() - target) < std::abs(b->header.stamp.toSec() - target);
+    [&target](const CvImageStamped& a, const CvImageStamped& b) {
+      return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
   });
 
   // reinitialize our tracker with the found image frame with the closest timestamp and bounding box
-  const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(*closest, encoding);
-  bool success = cc.tracker->init(bridge_image_ptr->image, bbox);
+  bool success = cc.tracker->init(closest->image, bbox);
 
   // iterate over all other images and update our tracker
   for (auto it = closest + 1; it != cc.buffer.end(); ++it) {
@@ -179,8 +172,7 @@ bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& 
       break;
     }
 
-    bridge_image_ptr = cv_bridge::toCvShare(*it, encoding);
-    success = cc.tracker->update(bridge_image_ptr->image, bbox);
+    success = cc.tracker->update(it->image, bbox);
   }
 
   return success;
@@ -233,7 +225,12 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double max_y = 0.0;
 
   std::vector<cv::Point2d> projections;
+  projections.reserve(cloud.points.size());
   for (const pcl::PointXYZ& point : cloud.points) {
+    if (point.z < 0) {
+      continue;
+    }
+
     // | ----------- backproject the point from 3D to 2D ---------- |
     cv::Point2d pt2d = cc.model.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
     // | ----------- unrectify the 2D point coordinates ----------- |
@@ -258,7 +255,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double height = max_y - min_y;
 
   if (width > 0 && height > 0) {
-    std::lock_guard<std::mutex> lock(cc.mutex);
+    std::lock_guard lock(cc.mutex);
     cc.detection = cv::Rect2d(min_x, min_y, width, height);
     cc.stamp = points.header.stamp;
   }

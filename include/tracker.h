@@ -27,6 +27,11 @@
 namespace eagle_track
 {
 
+struct CvImageStamped {
+  cv::Mat image;
+  ros::Time stamp;
+};
+
 // structure for holding all the information relevant to camera model, projected detection,
 // tracker, subscribers and publishers
 // callbacks are implemented in the Tracker class with corresponding camera context
@@ -42,7 +47,7 @@ struct CameraContext {
 
   // buffer for storing latest number of images for initializing the tracker with the bounding box
   // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
-  boost::circular_buffer<sensor_msgs::ImageConstPtr> buffer = boost::circular_buffer<sensor_msgs::ImageConstPtr>(30);
+  boost::circular_buffer<CvImageStamped> buffer = boost::circular_buffer<CvImageStamped>(30);
   // what tracker to use, in the future might add as an argument to the constructor
   cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
 
