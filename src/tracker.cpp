@@ -84,6 +84,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
     publishImage(track_image, msg->header, encoding, cc);
   } else {
+    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Update of the tracker failed");
     publishImage(image, msg->header, encoding, cc);
   }
 
@@ -178,19 +179,22 @@ void Tracker::initContext(CameraContext& cc) {
       return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
   });
 
-  // release the internal resources of the tracker && recreate the tracker
-  cc.tracker.release();
-  cc.tracker = cv::TrackerMOSSE::create();
+  // create tracker for reinitializing
+  auto new_tracker = cv::TrackerMOSSE::create();
 
   // reinitialize the tracker with the found image frame with the closest timestamp and bounding box
-  bool success = cc.tracker->init(closest->image, bbox);
+  bool success = new_tracker->init(closest->image, bbox);
 
   // iterate over all other images and update our tracker while successful
   for (auto it = closest + 1; success && it != cc.buffer.end(); ++it) {
-    success = cc.tracker->update(it->image, bbox);
+    success = new_tracker->update(it->image, bbox);
   }
 
-  if (!success) {
+  if (success) {
+    // release the internal resources of the tracker && assign with new tracker on success
+    cc.tracker.release();
+    cc.tracker = new_tracker;
+  } else {
     NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Reinitialization failed with " << bbox);
   }
 }
