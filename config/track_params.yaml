@@ -6,8 +6,9 @@ bbox_resize_width: 2.5
 bbox_resize_height: 8.0
 
 # minimum width & height for the bounding box to be considered after resizing
-bbox_min_width: 1.0
-bbox_min_height: 1.0
+# must be more than 2.0 for cv::Tracker to initialize correctly and not to throw exceptions
+bbox_min_width: 2.0
+bbox_min_height: 2.0
 
 # number of images stored in buffer for synchronization between lidar & camera
-image_buffer_size: 3
+image_buffer_size: 5
