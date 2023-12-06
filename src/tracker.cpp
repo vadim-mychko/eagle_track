@@ -11,13 +11,15 @@ void Tracker::onInit() {
   ROS_INFO_ONCE("[Tracker]: Waiting for valid time...");
   ros::Time::waitForValid();
 
-  // | ------------------- ros parameters ------------------ |
+  // | ------------------- static parameters ------------------ |
   mrs_lib::ParamLoader pl(nh, "Tracker");
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   pl.loadParam("throttle_period", _throttle_period_);
   pl.loadParam("bbox_resize_width", _bbox_resize_width_);
   pl.loadParam("bbox_resize_height", _bbox_resize_height_);
+  pl.loadParam("bbox_min_width", _bbox_min_width_);
+  pl.loadParam("bbox_min_height", _bbox_min_height_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   if (!pl.loadedSuccessfully()) {
@@ -63,38 +65,29 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
+  // always reinitialize tracker when new detection is given
+  // assume that detections are more reliable source of information than tracking itself
+  if (cc.should_init) {
+    initContext(cc);
+  }
+
   const std::string encoding = "bgr8";
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
 
-  cc.buffer.push_back({image, msg->header.stamp});
-
   cv::Rect2d bbox;
-  bool success = true;
-  bool shouldInit = !cc.tracker->update(image, bbox);
-  if (shouldInit) {
-    ros::Time stamp;
-    {
-      std::lock_guard<std::mutex> lock(cc.mutex);
-      bbox = cc.detection;
-      stamp = cc.stamp;
-    }
-    success = initContext(cc, bbox, stamp);
-  }
-
-  if (shouldInit && !success) {
-    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Reinitialization failed with " << bbox);
-  }
+  bool success = cc.tracker != nullptr && cc.tracker->update(image, bbox);
 
   if (success) {
-    // cv::InputArray indicates that the variable should not be modified, but we want
-    // to draw into the image. Therefore we need to copy it.
+    // we don't want to modify the original variable, therefore we need to copy it
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
     publishImage(track_image, msg->header, encoding, cc);
   } else {
     publishImage(image, msg->header, encoding, cc);
   }
+
+  cc.buffer.push_back({image, msg->header.stamp});
 }
 
 void Tracker::callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg) {
@@ -157,13 +150,26 @@ void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, co
   pub_projections_.publish(out_msg);
 }
 
-bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp) {
-  if (cc.buffer.empty() || bbox == cv::Rect2d()) {
-    return false;
+void Tracker::initContext(CameraContext& cc) {
+  if (cc.buffer.empty()) {
+    return;
   }
 
-  // make bounding box bigger by some specified factors
-  bbox = scaleRect(bbox, _bbox_resize_width_, _bbox_resize_height_, cc);
+  cv::Rect2d bbox;
+  ros::Time stamp;
+  {
+    std::lock_guard lock(cc.mutex);
+    cc.should_init = false;
+    bbox = cc.detection;
+    stamp = cc.stamp;
+  }
+
+  // rescale bounding box by the specified parameters and crop it to fit camera resolution
+  bbox = scaleRect(bbox, cc);
+  // do not initialize if bounding box is less than provided parameters after resizing
+  if (bbox.width <= _bbox_min_width_ || bbox.height <= _bbox_min_height_) {
+    return;
+  }
 
   // find the closest image in terms of timestamps
   double target = stamp.toSec();
@@ -172,27 +178,29 @@ bool Tracker::initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& 
       return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
   });
 
-  // reinitialize our tracker with the found image frame with the closest timestamp and bounding box
+  // release the internal resources of the tracker && recreate the tracker
+  cc.tracker.release();
+  cc.tracker = cv::TrackerMOSSE::create();
+
+  // reinitialize the tracker with the found image frame with the closest timestamp and bounding box
   bool success = cc.tracker->init(closest->image, bbox);
 
-  // iterate over all other images and update our tracker
-  for (auto it = closest + 1; it != cc.buffer.end(); ++it) {
-    if (!success) { 
-      break;
-    }
-
+  // iterate over all other images and update our tracker while successful
+  for (auto it = closest + 1; success && it != cc.buffer.end(); ++it) {
     success = cc.tracker->update(it->image, bbox);
   }
 
-  return success;
+  if (!success) {
+    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Reinitialization failed with " << bbox);
+  }
 }
 
-cv::Rect2d Tracker::scaleRect(const cv::Rect2d& rect, double width_factor, double height_factor, const CameraContext& cc) {
+cv::Rect2d Tracker::scaleRect(const cv::Rect2d& rect, const CameraContext& cc) {
   double cam_width = cc.model.fullResolution().width;
   double cam_height = cc.model.fullResolution().height;
 
-  double new_width = rect.width * width_factor;
-  double new_height = rect.height * height_factor;
+  double new_width = rect.width * _bbox_resize_width_;
+  double new_height = rect.height * _bbox_resize_height_;
   double diff_width = new_width - rect.width;
   double diff_height = new_height - rect.height;
 
@@ -265,6 +273,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
 
   if (width > 0 && height > 0) {
     std::lock_guard lock(cc.mutex);
+    cc.should_init = true;
     cc.detection = cv::Rect2d(min_x, min_y, width, height);
     cc.stamp = points.header.stamp;
   }

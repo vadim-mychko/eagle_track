@@ -38,6 +38,7 @@ struct CvImageStamped {
 struct CameraContext {
   // | ---------------------- flags --------------------- |
   bool got_info = false; // whether got camera info for point projection
+  bool should_init = false; // whether should reinitialize tracker
 
   // | ---------------------- struct parameters --------------------- |
   std::string name; // name of the camera context
@@ -49,7 +50,7 @@ struct CameraContext {
   // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
   boost::circular_buffer<CvImageStamped> buffer;
   // what tracker to use, in the future might add as an argument to the constructor
-  cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
+  cv::Ptr<cv::Tracker> tracker = nullptr;
 
   // mutex to ensure thread safety
   // also servers as a tool to read "atomically" several variables at once: detection, stamp
@@ -79,6 +80,8 @@ private:
   double _throttle_period_;
   double _bbox_resize_width_;
   double _bbox_resize_height_;
+  double _bbox_min_width_;
+  double _bbox_min_height_;
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;
@@ -101,8 +104,8 @@ private:
   CameraContext front_ = CameraContext("FrontCamera");
   CameraContext down_ = CameraContext("DownCamera");
 
-  bool initContext(CameraContext& cc, cv::Rect2d& bbox, const ros::Time& stamp);
-  cv::Rect2d scaleRect(const cv::Rect2d& rect, double width_factor, double height_factor, const CameraContext& cc);
+  void initContext(CameraContext& cc);
+  cv::Rect2d scaleRect(const cv::Rect2d& rect, const CameraContext& cc);
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;
