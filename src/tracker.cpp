@@ -67,6 +67,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
 
+  // store the last bgr image for visualization of projections onto the camera frame
   cc.prev_frame = image;
 
   // push grayscale image into the buffer

@@ -52,6 +52,7 @@ struct CameraContext {
   // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
   boost::circular_buffer<CvImageStamped> buffer;
 
+  // needed for visualization of projections onto the camera frame
   cv::Mat prev_frame;
 
   // mutex to ensure thread safety
