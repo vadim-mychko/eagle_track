@@ -16,10 +16,6 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   pl.loadParam("throttle_period", _throttle_period_);
-  pl.loadParam("bbox_resize_width", _bbox_resize_width_);
-  pl.loadParam("bbox_resize_height", _bbox_resize_height_);
-  pl.loadParam("bbox_min_width", _bbox_min_width_);
-  pl.loadParam("bbox_min_height", _bbox_min_height_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   if (!pl.loadedSuccessfully()) {
@@ -30,7 +26,6 @@ void Tracker::onInit() {
   // | ---------------------- camera contexts --------------------- |
   // resize buffers of camera contexts based on the provided parameter
   front_.buffer.resize(image_buffer_size);
-  down_.buffer.resize(image_buffer_size);
 
   // | ---------------------- subscribers --------------------- |
   image_transport::ImageTransport it(nh);
@@ -65,30 +60,47 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  // always reinitialize tracker when new detection is given
-  // assume that detections are more reliable source of information than tracking itself
-  if (cc.should_init) {
-    initContext(cc);
-  }
+  initContext(cc);
 
   const std::string encoding = "bgr8";
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
 
-  cv::Rect2d bbox;
-  bool success = cc.tracker != nullptr && cc.tracker->update(image, bbox);
+  cc.prev_frame = image;
 
-  if (success) {
-    // we don't want to modify the original variable, therefore we need to copy it
-    cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
-    publishImage(track_image, msg->header, encoding, cc);
-  } else {
-    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Update of the tracker failed");
-    publishImage(image, msg->header, encoding, cc);
+  // push grayscale image into the buffer
+  cv::Mat grayscale;
+  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
+  cc.buffer.push_back({grayscale, msg->header.stamp});
+
+  if (cc.buffer.size() >= 2 && !cc.points.empty()) {
+    auto prev = cc.buffer.end() - 2;
+    auto curr = cc.buffer.end() - 1;
+    std::vector<cv::Point2f> next_points;
+    std::vector<uchar> status;
+    std::vector<float> err;
+    cv::calcOpticalFlowPyrLK(prev->image, curr->image, cc.points, next_points, status, err);
+
+    // filter points by their status
+    cc.points.clear();
+    for (std::size_t i = 0; i < next_points.size(); ++i) {
+      if (status[i] == 1) {
+        cc.points.push_back(next_points[i]);
+      }
+    }
   }
 
-  cc.buffer.push_back({image, msg->header.stamp});
+  if (cc.points.empty()) {
+    publishImage(image, msg->header, encoding, cc);
+  } else {
+    // we don't want to modify the original image, therefore we need to copy it
+    cv::Mat track_image = image.clone();
+    for (const auto& point : cc.points) {
+      cv::circle(track_image, point, 5, cv::Scalar(255, 0, 0), -1);
+    }
+
+    publishImage(track_image, msg->header, encoding, cc);
+  }
 }
 
 void Tracker::callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg) {
@@ -134,12 +146,12 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   cc.pub_image.publish(out_msg);
 }
 
-void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, const CameraContext& cc) {
-  if (cc.buffer.empty()) {
+void Tracker::publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc) {
+  if (cc.prev_frame.empty()) {
     return;
   }
 
-  cv::Mat project_image = cc.buffer.back().image.clone();
+  cv::Mat project_image = cc.prev_frame.clone();
   for (const cv::Point2d& point : projections) {
     cv::circle(project_image, point, 5, cv::Scalar(0, 0, 255), -1);
   }
@@ -152,24 +164,16 @@ void Tracker::publishProjections(const std::vector<cv::Point2d>& projections, co
 }
 
 void Tracker::initContext(CameraContext& cc) {
-  if (cc.buffer.empty()) {
-    return;
-  }
-
-  cv::Rect2d bbox;
   ros::Time stamp;
   {
     std::lock_guard lock(cc.mutex);
-    cc.should_init = false;
-    bbox = cc.detection;
-    stamp = cc.stamp;
-  }
+    if (cc.buffer.size() <= 1 || !cc.should_init || cc.detect_points.empty()) {
+      return;
+    }
 
-  // rescale bounding box by the specified parameters and crop it to fit camera resolution
-  bbox = scaleRect(bbox, cc);
-  // do not initialize if bounding box is less than provided parameters after resizing
-  if (bbox.width <= _bbox_min_width_ || bbox.height <= _bbox_min_height_) {
-    return;
+    cc.should_init = false;
+    cc.points = std::move(cc.detect_points);
+    stamp = cc.stamp;
   }
 
   // find the closest image in terms of timestamps
@@ -179,41 +183,28 @@ void Tracker::initContext(CameraContext& cc) {
       return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
   });
 
-  // create tracker for reinitializing
-  auto new_tracker = cv::TrackerMOSSE::create();
+  // to calculate optical flow we need two images: previous and current
+  // if closest is the last one images, make it to point to previous
+  // we know that buffer size is greater or equal to 2 images
+  closest = closest == cc.buffer.end() - 1 ? cc.buffer.end() - 2 : closest;
 
-  // reinitialize the tracker with the found image frame with the closest timestamp and bounding box
-  bool success = new_tracker->init(closest->image, bbox);
+  for (auto it = closest; it != cc.buffer.end() - 1; ++it) {
+    auto prev = it;
+    auto curr = it + 1;
 
-  // iterate over all other images and update our tracker while successful
-  for (auto it = closest + 1; success && it != cc.buffer.end(); ++it) {
-    success = new_tracker->update(it->image, bbox);
+    std::vector<cv::Point2f> next_points;
+    std::vector<uchar> status;
+    std::vector<float> err;
+    cv::calcOpticalFlowPyrLK(prev->image, curr->image, cc.points, next_points, status, err);
+
+    // filter points by their status
+    cc.points.clear();
+    for (std::size_t i = 0; i < next_points.size(); ++i) {
+      if (status[i] == 1) {
+        cc.points.push_back(next_points[i]);
+      }
+    }
   }
-
-  if (success) {
-    // release the internal resources of the tracker && assign with new tracker on success
-    cc.tracker.release();
-    cc.tracker = new_tracker;
-  } else {
-    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Reinitialization failed with " << bbox);
-  }
-}
-
-cv::Rect2d Tracker::scaleRect(const cv::Rect2d& rect, const CameraContext& cc) {
-  double cam_width = cc.model.fullResolution().width;
-  double cam_height = cc.model.fullResolution().height;
-
-  double new_width = rect.width * _bbox_resize_width_;
-  double new_height = rect.height * _bbox_resize_height_;
-  double diff_width = new_width - rect.width;
-  double diff_height = new_height - rect.height;
-
-  double new_x = std::max(0.0, rect.x - diff_width / 2);
-  double new_y = std::max(0.0, rect.y - diff_height / 2);
-  new_width = std::min(cam_width - new_x, new_width);
-  new_height = std::min(cam_height - new_y, new_height);
-
-  return cv::Rect2d(new_x, new_y, new_width, new_height);
 }
 
 void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc) {
@@ -245,7 +236,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double max_x = 0.0;
   double max_y = 0.0;
 
-  std::vector<cv::Point2d> projections;
+  std::vector<cv::Point2f> projections;
   projections.reserve(cloud.points.size());
   for (const pcl::PointXYZ& point : cloud.points) {
     if (point.z < 0) {
@@ -278,7 +269,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   if (width > 0 && height > 0) {
     std::lock_guard lock(cc.mutex);
     cc.should_init = true;
-    cc.detection = cv::Rect2d(min_x, min_y, width, height);
+    cc.detect_points = projections;
     cc.stamp = points.header.stamp;
   }
 

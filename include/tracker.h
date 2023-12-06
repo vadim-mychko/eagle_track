@@ -7,7 +7,7 @@
 #include <nodelet/nodelet.h>
 
 // some OpenCV includes
-#include <opencv2/tracking/tracker.hpp>
+#include <opencv2/video/tracking.hpp>
 
 // ROS includes for working with OpenCV and images
 #include <image_transport/image_transport.h>
@@ -38,19 +38,20 @@ struct CvImageStamped {
 struct CameraContext {
   // | ---------------------- flags --------------------- |
   bool got_info = false; // whether got camera info for point projection
-  bool should_init = false; // whether should reinitialize tracker
+  bool should_init = false;
 
   // | ---------------------- struct parameters --------------------- |
   std::string name; // name of the camera context
-  cv::Rect2d detection; // bounding box from the latest detection 
+  std::vector<cv::Point2f> detect_points; // points from the last detection
+  std::vector<cv::Point2f> points; // points calculated from previous optical flow
   ros::Time stamp; // timestamp of the bounding box from the latest detection
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
 
   // buffer for storing latest number of images for initializing the tracker with the bounding box
   // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
   boost::circular_buffer<CvImageStamped> buffer;
-  // what tracker to use, in the future might add as an argument to the constructor
-  cv::Ptr<cv::Tracker> tracker = nullptr;
+
+  cv::Mat prev_frame;
 
   // mutex to ensure thread safety
   // also servers as a tool to read "atomically" several variables at once: detection, stamp
@@ -78,10 +79,6 @@ private:
 
   // | ---------------------- static parameters --------------------- |
   double _throttle_period_;
-  double _bbox_resize_width_;
-  double _bbox_resize_height_;
-  double _bbox_min_width_;
-  double _bbox_min_height_;
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;
@@ -98,14 +95,13 @@ private:
   image_transport::Publisher pub_projections_;
 
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
-  void publishProjections(const std::vector<cv::Point2d>& projections, const CameraContext& cc);
+  void publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc);
 
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
   CameraContext down_ = CameraContext("DownCamera");
 
   void initContext(CameraContext& cc);
-  cv::Rect2d scaleRect(const cv::Rect2d& rect, const CameraContext& cc);
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;
