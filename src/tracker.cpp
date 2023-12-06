@@ -16,6 +16,7 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   pl.loadParam("throttle_period", _throttle_period_);
+  pl.loadParam("orb_neighbourhood_radius", _orb_neighbourhood_radius_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   if (!pl.loadedSuccessfully()) {
@@ -183,12 +184,24 @@ void Tracker::initContext(CameraContext& cc) {
       return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
   });
 
-  // to calculate optical flow we need two images: previous and current
-  // if closest is the last one images, make it to point to previous
-  // we know that buffer size is greater or equal to 2 images
-  closest = closest == cc.buffer.end() - 1 ? cc.buffer.end() - 2 : closest;
+  // detect features using orb extractor and small neighbourhoods around points from detections
+  // firstly create mask for defining regions of interest, zeros during extracing are ignored
+  cv::Mat mask = cv::Mat::zeros(closest->image.size(), CV_8UC1);
+  // iterate over points received from detections and draw small neighbourhoods onto mask
+  for (const auto& point : cc.points) {
+    cv::circle(mask, point, _orb_neighbourhood_radius_, cv::Scalar(255), cv::FILLED);
+  }
 
-  for (auto it = closest; it != cc.buffer.end() - 1; ++it) {
+  // detect features using orb extraction
+  std::vector<cv::KeyPoint> keypoints;
+  cv::Mat descriptors;
+  orb_->detectAndCompute(closest->image, mask, keypoints, descriptors);
+
+  // convert received keypoints into points suitable for optical flow
+  cv::KeyPoint::convert(keypoints, cc.points);
+
+  // iterate over remaining images in the buffer if needed
+  for (auto it = closest; !cc.points.empty() && it < cc.buffer.end() - 1; ++it) {
     auto prev = it;
     auto curr = it + 1;
 

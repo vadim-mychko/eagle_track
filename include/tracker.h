@@ -7,6 +7,7 @@
 #include <nodelet/nodelet.h>
 
 // some OpenCV includes
+#include <opencv2/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
 
 // ROS includes for working with OpenCV and images
@@ -79,6 +80,7 @@ private:
 
   // | ---------------------- static parameters --------------------- |
   double _throttle_period_;
+  double _orb_neighbourhood_radius_;
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;
@@ -100,6 +102,7 @@ private:
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
   CameraContext down_ = CameraContext("DownCamera");
+  cv::Ptr<cv::ORB> orb_ = cv::ORB::create();
 
   void initContext(CameraContext& cc);
 
