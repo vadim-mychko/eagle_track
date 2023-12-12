@@ -244,12 +244,6 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double cam_width = cc.model.fullResolution().width;
   double cam_height = cc.model.fullResolution().height;
 
-  // variables for creating bounding box to return
-  double min_x = cam_width;
-  double min_y = cam_height;
-  double max_x = 0.0;
-  double max_y = 0.0;
-
   std::vector<cv::Point2f> projections;
   projections.reserve(cloud.points.size());
   for (const pcl::PointXYZ& point : cloud.points) {
@@ -267,20 +261,11 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
     // check if the projected point is inside the camera frame
     if (pt2d_unrec.x >= 0 && pt2d_unrec.x < cam_width
           && pt2d_unrec.y >= 0 && pt2d_unrec.y < cam_height) {
-      // Update bounding box coordinates
-      min_x = std::min(min_x, pt2d_unrec.x);
-      min_y = std::min(min_y, pt2d_unrec.y);
-      max_x = std::max(max_x, pt2d_unrec.x);
-      max_y = std::max(max_y, pt2d_unrec.y);
-
       projections.push_back(pt2d_unrec);
     }
   }
 
-  double width = max_x - min_x;
-  double height = max_y - min_y;
-
-  if (width > 0 && height > 0) {
+  {
     std::lock_guard lock(cc.mutex);
     cc.should_init = true;
     cc.detect_points = projections;
