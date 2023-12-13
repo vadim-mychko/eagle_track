@@ -5,13 +5,12 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1/Frames1
         - /eagle odom1/Shape1
         - /pc filtering1/raw pc1
         - /tracked target1/Covariance1/Position1
         - /all tracks1/Covariance1
         - /all tracks1/Covariance1/Position1
-      Splitter Ratio: 0.32765957713127136
+      Splitter Ratio: 0.38297873735427856
     Tree Height: 768
   - Class: rviz/Selection
     Name: Selection
@@ -93,12 +92,120 @@ Visualization Manager:
       Show Trail: false
       Value: false
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        base_link:
+          Value: false
+        base_link_frd:
+          Value: false
+        common_origin:
+          Value: false
+        map:
+          Value: false
+        map_ned:
+          Value: false
+        odom:
+          Value: false
+        odom_ned:
+          Value: false
+        uav2/amsl_origin:
+          Value: false
+        uav2/fcu:
+          Value: false
+        uav2/fcu_untilted:
+          Value: false
+        uav2/fixed_origin:
+          Value: false
+        uav2/garmin:
+          Value: false
+        uav2/garmin_agl_origin:
+          Value: false
+        uav2/gps_baro_local_origin:
+          Value: false
+        uav2/gps_baro_origin:
+          Value: false
+        uav2/gps_baro_origin_att_only:
+          Value: false
+        uav2/gps_garmin_local_origin:
+          Value: false
+        uav2/gps_garmin_origin:
+          Value: false
+        uav2/gps_garmin_origin_att_only:
+          Value: false
+        uav2/ground_truth_local_origin:
+          Value: false
+        uav2/ground_truth_origin:
+          Value: false
+        uav2/local_origin:
+          Value: false
+        uav2/rtk_antenna:
+          Value: false
+        uav2/stable_origin:
+          Value: false
+        uav2/utm_origin:
+          Value: false
+        uav2/world_origin:
+          Value: false
+        uav91/amsl_origin:
+          Value: false
+        uav91/bluefox_down:
+          Value: false
+        uav91/bluefox_down_optical:
+          Value: false
+        uav91/bluefox_front:
+          Value: false
+        uav91/bluefox_front_optical:
+          Value: false
+        uav91/fcu:
+          Value: false
+        uav91/fcu/props:
+          Value: false
+        uav91/fcu/uav_marker:
+          Value: false
+        uav91/fcu_untilted:
+          Value: false
+        uav91/fixed_origin:
+          Value: false
+        uav91/garmin:
+          Value: false
+        uav91/garmin_agl_origin:
+          Value: false
+        uav91/gps_baro_local_origin:
+          Value: false
+        uav91/gps_baro_origin:
+          Value: false
+        uav91/gps_baro_origin_att_only:
+          Value: false
+        uav91/gps_garmin_local_origin:
+          Value: false
+        uav91/gps_garmin_origin:
+          Value: false
+        uav91/gps_garmin_origin_att_only:
+          Value: false
+        uav91/ground_truth_local_origin:
+          Value: false
+        uav91/ground_truth_origin:
+          Value: false
+        uav91/local_origin:
+          Value: false
+        uav91/os_imu:
+          Value: false
+        uav91/os_lidar:
+          Value: false
+        uav91/os_sensor:
+          Value: false
+        uav91/rtk_antenna:
+          Value: false
+        uav91/stable_origin:
+          Value: false
+        uav91/utm_origin:
+          Value: false
+        uav91/world_origin:
+          Value: false
       Marker Alpha: 1
       Marker Scale: 1
       Name: TF
@@ -106,9 +213,99 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        base_link:
+          base_link_frd:
+            {}
+        common_origin:
+          uav2/fcu:
+            uav2/fcu_untilted:
+              uav2/amsl_origin:
+                {}
+              uav2/garmin_agl_origin:
+                {}
+            uav2/fixed_origin:
+              {}
+            uav2/garmin:
+              {}
+            uav2/gps_baro_origin:
+              uav2/gps_baro_local_origin:
+                {}
+            uav2/gps_baro_origin_att_only:
+              {}
+            uav2/gps_garmin_origin:
+              uav2/gps_garmin_local_origin:
+                {}
+            uav2/gps_garmin_origin_att_only:
+              {}
+            uav2/ground_truth_origin:
+              uav2/ground_truth_local_origin:
+                {}
+            uav2/local_origin:
+              {}
+            uav2/rtk_antenna:
+              {}
+            uav2/stable_origin:
+              {}
+            uav2/utm_origin:
+              {}
+            uav2/world_origin:
+              {}
+          uav91/fcu:
+            uav91/bluefox_down:
+              uav91/bluefox_down_optical:
+                {}
+            uav91/bluefox_front:
+              uav91/bluefox_front_optical:
+                {}
+            uav91/fcu/props:
+              {}
+            uav91/fcu/uav_marker:
+              {}
+            uav91/fcu_untilted:
+              uav91/amsl_origin:
+                {}
+              uav91/garmin_agl_origin:
+                {}
+            uav91/fixed_origin:
+              {}
+            uav91/garmin:
+              {}
+            uav91/gps_baro_origin:
+              uav91/gps_baro_local_origin:
+                {}
+            uav91/gps_baro_origin_att_only:
+              {}
+            uav91/gps_garmin_origin:
+              uav91/gps_garmin_local_origin:
+                {}
+            uav91/gps_garmin_origin_att_only:
+              {}
+            uav91/ground_truth_origin:
+              uav91/ground_truth_local_origin:
+                {}
+            uav91/local_origin:
+              {}
+            uav91/os_sensor:
+              uav91/os_imu:
+                {}
+              uav91/os_lidar:
+                {}
+            uav91/rtk_antenna:
+              {}
+            uav91/stable_origin:
+              {}
+            uav91/utm_origin:
+              {}
+            uav91/world_origin:
+              {}
+        map:
+          map_ned:
+            {}
+        odom:
+          odom_ned:
+            {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Angle Tolerance: 0.009999999776482582
       Class: rviz/Odometry
       Covariance:
@@ -828,7 +1025,7 @@ Visualization Manager:
             Shaft Length: 1
             Shaft Radius: 0.05000000074505806
             Value: Axes
-          Topic: /uav2/odometry/odom_main
+          Topic: /uav2/estimation_manager/odom_main
           Unreliable: false
           Value: true
         - Alpha: 1
@@ -845,7 +1042,7 @@ Visualization Manager:
           Shaft Length: 0.5
           Shaft Radius: 0.029999999329447746
           Shape: Arrow (3D)
-          Topic: /uav2/control_manager/mpc_tracker/trajectory_processed/poses
+          Topic: /uav2/control_manager/mpc_tracker/mpc_reference_debugging
           Unreliable: false
           Value: true
       Enabled: true
@@ -942,7 +1139,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 10.402621269226074
+      Distance: 18.420127868652344
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -950,17 +1147,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.1448253393173218
-        Y: 31.61693000793457
-        Z: 0.5188069939613342
+        X: -2.9555487632751465
+        Y: 29.20709800720215
+        Z: 0.5188155174255371
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.42979690432548523
+      Pitch: 0.5197958946228027
       Target Frame: <Fixed Frame>
-      Yaw: 1.7646342515945435
+      Yaw: 2.299642562866211
     Saved: ~
 Window Geometry:
   Displays:
