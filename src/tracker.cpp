@@ -16,7 +16,6 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   pl.loadParam("throttle_period", _throttle_period_);
-  pl.loadParam("orb_neighbourhood_radius", _orb_neighbourhood_radius_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   if (!pl.loadedSuccessfully()) {
@@ -61,8 +60,6 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  initContext(cc);
-
   const std::string encoding = "bgr8";
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
@@ -75,21 +72,92 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
   cc.buffer.push_back({grayscale, msg->header.stamp});
 
-  if (cc.buffer.size() >= 2 && !cc.points.empty()) {
-    auto prev = cc.buffer.end() - 2;
-    auto curr = cc.buffer.end() - 1;
+  // if there is only one image inside buffer (including current image pushed), then
+  // do not perform any tracking nor visualization
+  if (cc.buffer.size() <= 1) {
+    return;
+  }
+
+  auto from = cc.buffer.end() - 2;
+  if (cc.should_init && !cc.points.empty()) {
+    ros::Time stamp;
+    {
+      std::lock_guard lock(cc.mutex);
+      cc.should_init = false;
+      cc.points = std::move(cc.detect_points);
+      stamp = cc.stamp;
+    }
+
+    // find the closest image in terms of timestamps
+    double target = stamp.toSec();
+    auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+      [&target](const CvImageStamped& a, const CvImageStamped& b) {
+        return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
+    });
+
+    // starting image has to be before the last image in the buffer
+    from = closest == cc.buffer.end() - 1 ? closest - 1 : closest;
+  }
+
+  // initialize data structure here for further visualization (updated at the last iteration)
+  cv::Mat matched_image;
+
+  // iterate over remaining images in the buffer
+  for (auto it = from; !cc.points.empty() && it < cc.buffer.end() - 1; ++it) {
+    auto prev = it;
+    auto curr = it + 1;
+
+    // | --------- perform optical flow for the two images -------- |
     std::vector<cv::Point2f> next_points;
     std::vector<uchar> status;
     std::vector<float> err;
     cv::calcOpticalFlowPyrLK(prev->image, curr->image, cc.points, next_points, status, err);
 
-    // filter points by their status
-    cc.points.clear();
+    // | --------- filter points by their status after the optical flow -------- |
+    std::vector<cv::Point2f> filtered_points;
     for (std::size_t i = 0; i < next_points.size(); ++i) {
       if (status[i] == 1) {
-        cc.points.push_back(next_points[i]);
+        filtered_points.push_back(next_points[i]);
       }
     }
+
+    cc.points = std::move(filtered_points);
+
+    // // | --------- convert points from to keypoints -------- |
+    // std::vector<cv::KeyPoint> keypoints;
+    // std::vector<cv::KeyPoint> next_keypoints;
+    // cv::KeyPoint::convert(cc.points, keypoints);
+    // cv::KeyPoint::convert(filtered_points, next_keypoints);
+
+    // // | --------- compute descriptors for each vector of keypoints -------- |
+    // cv::Mat descriptors;
+    // cv::Mat next_descriptors;
+    // orb_->compute(prev->image, keypoints, descriptors);
+    // orb_->compute(curr->image, next_keypoints, next_descriptors);
+
+    // // | --------- match descriptors between the previous and next image -------- |
+    // std::vector<std::vector<cv::DMatch>> knn_matches;
+    // matcher_->knnMatch(descriptors, next_descriptors, knn_matches, 2);
+
+    // // | --------- filter matches based on Lowe's ratio test -------- |
+    // constexpr float ratio_thresh = 0.7f;
+    // std::vector<cv::DMatch> good_matches;
+    // for (size_t i = 0; i < knn_matches.size(); i++) {
+    //   if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
+    //       good_matches.push_back(knn_matches[i][0]);
+    //   }
+    // }
+
+    // // if the last iteration, update visualization data structure
+    // if (curr == cc.buffer.end() - 1) {
+    //   cv::drawMatches(prev->image, keypoints, curr->image, next_keypoints, good_matches, matched_image);
+    // }
+
+    // // | --------- extract points from matched points for the next iteration -------- |
+    // cc.points.clear();
+    // for (const auto& match : good_matches) {
+    //   cc.points.push_back(next_keypoints[match.trainIdx].pt);
+    // }
   }
 
   if (cc.points.empty()) {
@@ -163,62 +231,6 @@ void Tracker::publishProjections(const std::vector<cv::Point2f>& projections, co
   bridge_image_out.encoding = "bgr8";
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   pub_projections_.publish(out_msg);
-}
-
-void Tracker::initContext(CameraContext& cc) {
-  ros::Time stamp;
-  {
-    std::lock_guard lock(cc.mutex);
-    if (cc.buffer.size() <= 1 || !cc.should_init || cc.detect_points.empty()) {
-      return;
-    }
-
-    cc.should_init = false;
-    cc.points = std::move(cc.detect_points);
-    stamp = cc.stamp;
-  }
-
-  // find the closest image in terms of timestamps
-  double target = stamp.toSec();
-  auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const CvImageStamped& a, const CvImageStamped& b) {
-      return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
-  });
-
-  // detect features using orb extractor and small neighbourhoods around points from detections
-  // firstly create mask for defining regions of interest, zeros during extracing are ignored
-  cv::Mat mask = cv::Mat::zeros(closest->image.size(), CV_8UC1);
-  // iterate over points received from detections and draw small neighbourhoods onto mask
-  for (const auto& point : cc.points) {
-    cv::circle(mask, point, _orb_neighbourhood_radius_, cv::Scalar(255), cv::FILLED);
-  }
-
-  // detect features using orb extraction
-  std::vector<cv::KeyPoint> keypoints;
-  cv::Mat descriptors;
-  orb_->detectAndCompute(closest->image, mask, keypoints, descriptors);
-
-  // convert received keypoints into points suitable for optical flow
-  cv::KeyPoint::convert(keypoints, cc.points);
-
-  // iterate over remaining images in the buffer if needed
-  for (auto it = closest; !cc.points.empty() && it < cc.buffer.end() - 1; ++it) {
-    auto prev = it;
-    auto curr = it + 1;
-
-    std::vector<cv::Point2f> next_points;
-    std::vector<uchar> status;
-    std::vector<float> err;
-    cv::calcOpticalFlowPyrLK(prev->image, curr->image, cc.points, next_points, status, err);
-
-    // filter points by their status
-    cc.points.clear();
-    for (std::size_t i = 0; i < next_points.size(); ++i) {
-      if (status[i] == 1) {
-        cc.points.push_back(next_points[i]);
-      }
-    }
-  }
 }
 
 void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc) {

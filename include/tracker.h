@@ -81,7 +81,6 @@ private:
 
   // | ---------------------- static parameters --------------------- |
   double _throttle_period_;
-  double _orb_neighbourhood_radius_;
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;
@@ -104,8 +103,7 @@ private:
   CameraContext front_ = CameraContext("FrontCamera");
   CameraContext down_ = CameraContext("DownCamera");
   cv::Ptr<cv::ORB> orb_ = cv::ORB::create();
-
-  void initContext(CameraContext& cc);
+  cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create(cv::DescriptorMatcher::BRUTEFORCE_HAMMING);
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;

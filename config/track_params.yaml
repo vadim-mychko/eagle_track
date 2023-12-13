@@ -3,6 +3,3 @@ throttle_period: 1.0
 
 # number of images stored in buffer for synchronization between lidar & camera
 image_buffer_size: 5
-
-# number of pixels for defining small neighbourhood around points from detections
-orb_neighbourhood_radius: 3
