@@ -61,7 +61,7 @@ windows:
   - tf_connector:
       layout: tiled
       panes:
-        - waitForControl; roslaunch tf_connector tf_connector.launch custom_config:=$TRACK_PATH/config/tf_connector.yaml
+        - waitForControl; roslaunch tf_connector tf_connector.launch custom_config:=./config/tf_connector.yaml
   - rviz:
       layout: tiled
       panes:
