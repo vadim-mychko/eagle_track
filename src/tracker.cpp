@@ -107,8 +107,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     // | --------- perform optical flow for the two images -------- |
     std::vector<cv::Point2f> next_points;
     std::vector<uchar> status;
-    std::vector<float> err;
-    cv::calcOpticalFlowPyrLK(prev->image, curr->image, cc.points, next_points, status, err);
+    opt_flow_->calc(prev->image, curr->image, cc.points, next_points, status);
 
     // | --------- filter points by their status after the optical flow -------- |
     std::vector<cv::Point2f> filtered_points;
@@ -118,15 +117,18 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
       }
     }
 
+    if (filtered_points.empty()) {
+      cc.points.clear();
+      break;
+    }
+
     // | --------- convert points from to keypoints -------- |
-    std::vector<cv::KeyPoint> keypoints;
-    std::vector<cv::KeyPoint> next_keypoints;
+    std::vector<cv::KeyPoint> keypoints, next_keypoints;
     cv::KeyPoint::convert(cc.points, keypoints);
     cv::KeyPoint::convert(filtered_points, next_keypoints);
 
     // | --------- compute descriptors for each vector of keypoints -------- |
-    cv::Mat descriptors;
-    cv::Mat next_descriptors;
+    cv::Mat descriptors, next_descriptors;
     orb_->compute(prev->image, keypoints, descriptors);
     orb_->compute(curr->image, next_keypoints, next_descriptors);
 
@@ -139,7 +141,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     std::vector<cv::DMatch> good_matches;
     for (size_t i = 0; i < knn_matches.size(); i++) {
       if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
-          good_matches.push_back(knn_matches[i][0]);
+        good_matches.push_back(knn_matches[i][0]);
       }
     }
 

@@ -101,6 +101,7 @@ private:
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
   cv::Ptr<cv::ORB> orb_ = cv::ORB::create();
+  cv::Ptr<cv::SparsePyrLKOpticalFlow> opt_flow_ = cv::SparsePyrLKOpticalFlow::create();
   cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create(cv::DescriptorMatcher::BRUTEFORCE_HAMMING);
 
   // | -------------------- point projection -------------------- |
