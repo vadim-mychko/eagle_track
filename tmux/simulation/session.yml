@@ -24,7 +24,7 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-rangefinder --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-128 --use-gpu-ray --horizontal-samples 1024 --rotation-freq 10"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --model_package eagle_gazebo_resources --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-rangefinder --enable-ground-truth --enable-bluefox-camera --enable-ouster --ouster-model OS1-32 --use-gpu-ray --horizontal-samples 1024 --rotation-freq 10"
         - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-rangefinder --enable-ground-truth"
   - hw_api:
       layout: tiled
@@ -51,6 +51,7 @@ windows:
         - export UAV_NAME=uav91; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
         - export UAV_NAME=uav2; waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
         - export UAV_NAME=uav2; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
+        - waitForOffboard; sleep 45; roslaunch mrs_uav_trajectory_loader load.launch config:=./config/trajectories.yaml path:=$TRACK_PATH/tmux/simulation/config
   - tf_connector:
       layout: tiled
       panes:
@@ -64,7 +65,7 @@ windows:
   - detect:
       layout: tiled
       panes:
-        - waitForControl; roslaunch vofod detect.launch world_frame_id:=$UAV_NAME/world_origin apriori_map_config_filename:=$DETECT_PATH/config/apriori_maps/sim.yaml sensor_config_filename:=$DETECT_PATH/config/sensors/os1-128.yaml
+        - waitForControl; roslaunch vofod detect.launch world_frame_id:=$UAV_NAME/world_origin apriori_map_config_filename:=$DETECT_PATH/config/apriori_maps/sim.yaml sensor_config_filename:=$DETECT_PATH/config/sensors/os1-32.yaml
         - waitForControl; roslaunch lidar_tracker lidar_tracker.launch world_frame_id:=$UAV_NAME/world_origin
   - track:
       layout: tiled

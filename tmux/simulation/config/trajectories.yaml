@@ -1,0 +1,15 @@
+trajectory: 
+  loop: true
+  use_heading: true
+  fly_now: true
+
+  # If 'dynamic_uav_name' is true, the 'uavs' parameter is ignored and trajectory is loaded
+  # to the UAV, specified by the 'uav_name' parameter from the 'trajectory/filename' parameter.
+  # This allows for UAV name-agnostic trajectory loading (it doesn't need to be specified in
+  # the yaml and can be loaded eg. from an environment variable.
+  dynamic_uav_name: false
+  # Options specified here will override the common options above.
+  uavs:
+    uav91:
+      filename: "circle_small.txt"
+      offset: [2.0, 0.0, 0.0, 1.57]      # [x, y, z, heading]  heading = pi / 2
