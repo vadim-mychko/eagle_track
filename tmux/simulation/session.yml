@@ -6,7 +6,7 @@ attach: false
 tmux_options: -f /etc/ctu-mrs/tmux.conf
 # you can modify these
 pre_window: export UAV_NAME=uav91; export RUN_TYPE=simulation; export DETECT_PATH=`rospack find vofod`; export EAGLE_PATH=`rospack find eagle_gazebo_resources`; export TRACK_PATH=`rospack find eagle_track`
-startup_window: track
+startup_window: status
 windows:
   - roscore:
       layout: tiled
@@ -48,16 +48,9 @@ windows:
       layout: tiled
       panes:
         - export UAV_NAME=uav91; waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
-        - export UAV_NAME=uav2;  waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
-  - goto:
-      layout: tiled
-      panes:
-        - 'history -s rosservice call /$UAV_NAME/control_manager/goto \"goal: \[0.0, 10.0, 1.5, 0.0\]\"'
-  - arm_offboard:
-      layout: tiled
-      panes:
         - export UAV_NAME=uav91; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
-        - export UAV_NAME=uav2;  waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
+        - export UAV_NAME=uav2; waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
+        - export UAV_NAME=uav2; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
   - tf_connector:
       layout: tiled
       panes:
