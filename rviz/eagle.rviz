@@ -464,7 +464,7 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.25999999046325684
           Style: Boxes
-          Topic: /uav91/uav_detection/sepclusters_pc
+          Topic: /uav91/vofod/sepclusters_pc
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
@@ -492,7 +492,7 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.5
           Style: Boxes
-          Topic: /uav91/uav_detection/apriori_pc
+          Topic: /uav91/vofod/apriori_pc
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
@@ -522,14 +522,14 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.009999999776482582
           Style: Flat Squares
-          Topic: /uav91/uav_detection/sure_air_pc
+          Topic: /uav91/vofod/sure_air_pc
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: false
           Value: false
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /uav81/uav_detection/update_flags
+          Marker Topic: /uav91/vofod/update_flags
           Name: update flags
           Namespaces:
             {}
@@ -537,7 +537,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /uav81/uav_detection/frontiers_mks
+          Marker Topic: /uav91/vofod/frontiers_mks
           Name: frontiers
           Namespaces:
             {}
@@ -545,7 +545,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /uav91/uav_detection/lidar_raycast
+          Marker Topic: /uav91/vofod/lidar_raycast
           Name: lidar raycast
           Namespaces:
             {}
@@ -553,7 +553,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: true
-          Marker Topic: /uav91/uav_detection/operation_area
+          Marker Topic: /uav91/vofod/operation_area
           Name: oparea
           Namespaces:
             "": true
@@ -561,7 +561,7 @@ Visualization Manager:
           Value: true
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /uav91/uav_detection/voxel_map
+          Marker Topic: /uav91/vofod/voxel_map
           Name: voxel map
           Namespaces:
             {}
@@ -569,7 +569,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /uav91/uav_detection/detections_mks
+          Marker Topic: /uav91/vofod/detections_mks
           Name: clusters
           Namespaces:
             {}
@@ -577,7 +577,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/Marker
           Enabled: false
-          Marker Topic: /uav91/uav_detection/lidar_fov
+          Marker Topic: /uav91/vofod/lidar_fov
           Name: Ouster FOV
           Namespaces:
             {}
@@ -608,7 +608,7 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.5
           Style: Spheres
-          Topic: /uav91/uav_detection/detections_pc
+          Topic: /uav91/vofod/detections_pc
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
@@ -636,129 +636,13 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.5
           Style: Boxes
-          Topic: /uav91/uav_detection/background_pc
+          Topic: /uav91/vofod/background_pc
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
       Enabled: true
       Name: detection
-    - Class: rviz/Group
-      Displays:
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 10
-            Min Value: -10
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz/PointCloud2
-          Color: 255; 0; 0
-          Color Transformer: FlatColor
-          Decay Time: 0
-          Enabled: true
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: pre-aligned pc
-          Position Transformer: XYZ
-          Queue Size: 10
-          Selectable: true
-          Size (Pixels): 3
-          Size (m): 0.10000000149011612
-          Style: Flat Squares
-          Topic: /uav91/selflocalization/filtered_input_pc
-          Unreliable: false
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 10
-            Min Value: -10
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz/PointCloud2
-          Color: 100; 200; 100
-          Color Transformer: FlatColor
-          Decay Time: 0
-          Enabled: true
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: aligned pc
-          Position Transformer: XYZ
-          Queue Size: 10
-          Selectable: true
-          Size (Pixels): 3
-          Size (m): 0.10000000149011612
-          Style: Flat Squares
-          Topic: /uav91/selflocalization/aligned_input_pc
-          Unreliable: false
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 10
-            Min Value: -10
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz/PointCloud2
-          Color: 100; 100; 255
-          Color Transformer: FlatColor
-          Decay Time: 0
-          Enabled: true
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: aligned orig. pc
-          Position Transformer: XYZ
-          Queue Size: 10
-          Selectable: true
-          Size (Pixels): 3
-          Size (m): 0.10000000149011612
-          Style: Flat Squares
-          Topic: /uav91/selflocalization/points_transformed
-          Unreliable: false
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 10
-            Min Value: -10
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz/PointCloud2
-          Color: 100; 100; 155
-          Color Transformer: FlatColor
-          Decay Time: 0
-          Enabled: true
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: static pc
-          Position Transformer: XYZ
-          Queue Size: 10
-          Selectable: true
-          Size (Pixels): 3
-          Size (m): 0.05000000074505806
-          Style: Flat Squares
-          Topic: /uav91/selflocalization/static_pc
-          Unreliable: false
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
-      Enabled: false
-      Name: self-localization
     - Angle Tolerance: 0.10000000149011612
       Class: rviz/Odometry
       Covariance:
@@ -1139,7 +1023,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 18.420127868652344
+      Distance: 18.844642639160156
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1147,17 +1031,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -2.9555487632751465
-        Y: 29.20709800720215
-        Z: 0.5188155174255371
+        X: -0.9127814769744873
+        Y: -0.4823930263519287
+        Z: 0.5188173651695251
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5197958946228027
+      Pitch: 0.4747953414916992
       Target Frame: <Fixed Frame>
-      Yaw: 2.299642562866211
+      Yaw: 1.8546369075775146
     Saved: ~
 Window Geometry:
   Displays:
