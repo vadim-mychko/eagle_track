@@ -86,22 +86,20 @@ private:
   ros::Subscriber sub_detections_;
 
   void callbackImageFront(const sensor_msgs::ImageConstPtr& msg);
-  void callbackImageDown(const sensor_msgs::ImageConstPtr& msg);
   void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);
   void callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg);
-  void callbackCameraInfoDown(const sensor_msgs::CameraInfoConstPtr& msg);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
   void callbackDetections(const lidar_tracker::TracksConstPtr& msg);
 
   // | ---------------------- publishers --------------------- |
   image_transport::Publisher pub_projections_;
+  image_transport::Publisher pub_matches_;
 
-  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
+  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
   void publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc);
 
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
-  CameraContext down_ = CameraContext("DownCamera");
   cv::Ptr<cv::ORB> orb_ = cv::ORB::create();
   cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create(cv::DescriptorMatcher::BRUTEFORCE_HAMMING);
 

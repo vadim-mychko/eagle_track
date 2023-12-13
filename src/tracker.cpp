@@ -37,6 +37,7 @@ void Tracker::onInit() {
   // | ---------------------- publishers --------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
   pub_projections_ = it.advertise("projections", 1);
+  pub_matches_ = it.advertise("matches", 1);
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
@@ -49,10 +50,6 @@ void Tracker::onInit() {
 
 void Tracker::callbackImageFront(const sensor_msgs::ImageConstPtr& msg) {
   callbackImage(msg, front_);
-}
-
-void Tracker::callbackImageDown(const sensor_msgs::ImageConstPtr& msg) {
-  callbackImage(msg, down_);
 }
 
 void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
@@ -79,7 +76,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   }
 
   auto from = cc.buffer.end() - 2;
-  if (cc.should_init && !cc.points.empty()) {
+  if (cc.should_init && !cc.detect_points.empty()) {
     ros::Time stamp;
     {
       std::lock_guard lock(cc.mutex);
@@ -121,47 +118,48 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
       }
     }
 
-    cc.points = std::move(filtered_points);
+    // | --------- convert points from to keypoints -------- |
+    std::vector<cv::KeyPoint> keypoints;
+    std::vector<cv::KeyPoint> next_keypoints;
+    cv::KeyPoint::convert(cc.points, keypoints);
+    cv::KeyPoint::convert(filtered_points, next_keypoints);
 
-    // // | --------- convert points from to keypoints -------- |
-    // std::vector<cv::KeyPoint> keypoints;
-    // std::vector<cv::KeyPoint> next_keypoints;
-    // cv::KeyPoint::convert(cc.points, keypoints);
-    // cv::KeyPoint::convert(filtered_points, next_keypoints);
+    // | --------- compute descriptors for each vector of keypoints -------- |
+    cv::Mat descriptors;
+    cv::Mat next_descriptors;
+    orb_->compute(prev->image, keypoints, descriptors);
+    orb_->compute(curr->image, next_keypoints, next_descriptors);
 
-    // // | --------- compute descriptors for each vector of keypoints -------- |
-    // cv::Mat descriptors;
-    // cv::Mat next_descriptors;
-    // orb_->compute(prev->image, keypoints, descriptors);
-    // orb_->compute(curr->image, next_keypoints, next_descriptors);
+    // | --------- match descriptors between the previous and next image -------- |
+    std::vector<std::vector<cv::DMatch>> knn_matches;
+    matcher_->knnMatch(descriptors, next_descriptors, knn_matches, 2);
 
-    // // | --------- match descriptors between the previous and next image -------- |
-    // std::vector<std::vector<cv::DMatch>> knn_matches;
-    // matcher_->knnMatch(descriptors, next_descriptors, knn_matches, 2);
+    // | --------- filter matches based on Lowe's ratio test -------- |
+    constexpr float ratio_thresh = 0.7f;
+    std::vector<cv::DMatch> good_matches;
+    for (size_t i = 0; i < knn_matches.size(); i++) {
+      if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
+          good_matches.push_back(knn_matches[i][0]);
+      }
+    }
 
-    // // | --------- filter matches based on Lowe's ratio test -------- |
-    // constexpr float ratio_thresh = 0.7f;
-    // std::vector<cv::DMatch> good_matches;
-    // for (size_t i = 0; i < knn_matches.size(); i++) {
-    //   if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
-    //       good_matches.push_back(knn_matches[i][0]);
-    //   }
-    // }
+    // if this is the last iteration, update visualization data structure
+    if (curr == cc.buffer.end() - 1) {
+      cv::drawMatches(prev->image, keypoints, curr->image, next_keypoints, good_matches, matched_image);
+    }
 
-    // // if the last iteration, update visualization data structure
-    // if (curr == cc.buffer.end() - 1) {
-    //   cv::drawMatches(prev->image, keypoints, curr->image, next_keypoints, good_matches, matched_image);
-    // }
-
-    // // | --------- extract points from matched points for the next iteration -------- |
-    // cc.points.clear();
-    // for (const auto& match : good_matches) {
-    //   cc.points.push_back(next_keypoints[match.trainIdx].pt);
-    // }
+    // | --------- extract points from matched points for the next iteration -------- |
+    cc.points.clear();
+    for (const auto& match : good_matches) {
+      cc.points.push_back(next_keypoints[match.trainIdx].pt);
+    }
   }
 
+  // | ------------ visualization ------------ |
+  publishImage(matched_image, msg->header, encoding, pub_matches_);
+
   if (cc.points.empty()) {
-    publishImage(image, msg->header, encoding, cc);
+    publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
     // we don't want to modify the original image, therefore we need to copy it
     cv::Mat track_image = image.clone();
@@ -169,16 +167,12 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
       cv::circle(track_image, point, 5, cv::Scalar(255, 0, 0), -1);
     }
 
-    publishImage(track_image, msg->header, encoding, cc);
+    publishImage(track_image, msg->header, encoding, cc.pub_image);
   }
 }
 
 void Tracker::callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg) {
   callbackCameraInfo(msg, front_);
-}
-
-void Tracker::callbackCameraInfoDown(const sensor_msgs::CameraInfoConstPtr& msg) {
-  callbackCameraInfo(msg, down_);
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
@@ -204,7 +198,7 @@ void Tracker::callbackDetections(const lidar_tracker::TracksConstPtr& msg) {
   }
 }
 
-void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc) {
+void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
   // Prepare a cv_bridge image to be converted to the ROS message
   cv_bridge::CvImage bridge_image_out;
   bridge_image_out.image = image.getMat();
@@ -213,7 +207,7 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
 
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-  cc.pub_image.publish(out_msg);
+  pub.publish(out_msg);
 }
 
 void Tracker::publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc) {
