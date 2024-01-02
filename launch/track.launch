@@ -9,8 +9,10 @@
   <arg unless="$(arg debug)" name="launch_prefix_debug" value=""/>
   <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
 
-  <!-- nodelet-related arguments -->
+  <!-- select manually points as detections through GUI? -->
   <arg name="manual_detect" default="false" />
+
+  <!-- nodelet-related arguments -->
   <arg name="standalone" default="true" />
   <arg name="manager" default="$(arg UAV_NAME)_tracker_manager" />
   <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
@@ -32,7 +34,8 @@
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <remap from="~camera_front" to="/mobius/image_raw/compressed" />
+      <remap from="~camera_front" to="/mobius/image_raw" />
+      <remap from="~camera_front/compressed" to="/mobius/image_raw/compressed" />
       <remap from="~camera_front_info" to="/mobius/camera_info" />
       <remap from="~detections" to="lidar_tracker/tracks" />
 

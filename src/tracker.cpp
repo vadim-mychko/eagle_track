@@ -29,8 +29,8 @@ void Tracker::onInit() {
   front_.buffer.resize(image_buffer_size);
 
   // | ---------------------- subscribers --------------------- |
-  image_transport::TransportHints hints("compressed", ros::TransportHints(), nh);
   image_transport::ImageTransport it(nh);
+  image_transport::TransportHints hints("compressed", ros::TransportHints(), nh);
 
   front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this, hints);
   front_.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
