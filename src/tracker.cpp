@@ -15,6 +15,7 @@ void Tracker::onInit() {
   mrs_lib::ParamLoader pl(nh, "Tracker");
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
+  pl.loadParam("manual_detect", _manual_detect_);
   pl.loadParam("throttle_period", _throttle_period_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
@@ -28,9 +29,10 @@ void Tracker::onInit() {
   front_.buffer.resize(image_buffer_size);
 
   // | ---------------------- subscribers --------------------- |
+  image_transport::TransportHints hints("compressed", ros::TransportHints(), nh);
   image_transport::ImageTransport it(nh);
 
-  front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this);
+  front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this, hints);
   front_.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
   sub_detections_ = nh.subscribe("detections", 1, &Tracker::callbackDetections, this);
 
@@ -42,6 +44,12 @@ void Tracker::onInit() {
   transformer_ = mrs_lib::Transformer("Tracker");
   transformer_.setDefaultPrefix(uav_name);
   transformer_.retryLookupNewest(true);
+
+  // | --------------------- detection through GUI --------------------- |
+  if (_manual_detect_) {
+    int flags = cv::WINDOW_NORMAL | cv::WINDOW_FREERATIO | cv::WINDOW_GUI_EXPANDED;
+    cv::namedWindow("manual_detect", flags);
+  }
 
   initialized_ = true;
   NODELET_INFO_ONCE("[Tracker]: Initialized");
@@ -72,6 +80,28 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   // do not perform any tracking nor visualization
   if (cc.buffer.size() <= 1) {
     return;
+  }
+
+  if (_manual_detect_) {
+    auto callback = [](int event, int x, int y, [[maybe_unused]] int flags, void *data) {
+      auto img_points = reinterpret_cast<CvMatPoints*>(data);
+      cv::Point2f point{static_cast<float>(x), static_cast<float>(y)};
+      if (event == cv::EVENT_LBUTTONDOWN) {
+        img_points->points.push_back(point);
+      }
+
+      cv::circle(img_points->image, point, 5, cv::Scalar(0, 255, 0), -1);
+      cv::imshow("manual_detect", img_points->image);
+    };
+
+    CvMatPoints img_points;
+    img_points.image = image.clone();
+    cv::setMouseCallback("manual_detect", callback, reinterpret_cast<void*>(&img_points));
+    cv::imshow("manual_detect", image);
+    cv::waitKey(0);
+
+    std::lock_guard lock(cc.mutex);
+    cc.detect_points = std::move(img_points.points);
   }
 
   auto from = cc.buffer.end() - 2;

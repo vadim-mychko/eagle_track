@@ -10,6 +10,7 @@
   <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
 
   <!-- nodelet-related arguments -->
+  <arg name="manual_detect" default="false" />
   <arg name="standalone" default="true" />
   <arg name="manager" default="$(arg UAV_NAME)_tracker_manager" />
   <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
@@ -24,14 +25,15 @@
     <node pkg="nodelet" type="nodelet" name="eagle_track" args="$(arg nodelet) eagle_track/Tracker $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
 
       <!-- Parameters loaded from launch file -->
-      <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)"/>
+      <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)" />
+      <param name="manual_detect" type="boolean" value="$(arg manual_detect)" />
 
       <!-- Parameters loaded from YAML config file -->
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <remap from="~camera_front" to="bluefox_front/image_raw" />
-      <remap from="~camera_front_info" to="bluefox_front/camera_info" />
+      <remap from="~camera_front" to="/mobius/image_raw/compressed" />
+      <remap from="~camera_front_info" to="/mobius/camera_info" />
       <remap from="~detections" to="lidar_tracker/tracks" />
 
       <!-- Publishers -->
