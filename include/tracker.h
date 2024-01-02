@@ -93,16 +93,13 @@ private:
 
   // | ---------------------- publishers --------------------- |
   image_transport::Publisher pub_projections_;
-  image_transport::Publisher pub_matches_;
 
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
   void publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc);
 
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
-  cv::Ptr<cv::ORB> orb_ = cv::ORB::create();
   cv::Ptr<cv::SparsePyrLKOpticalFlow> opt_flow_ = cv::SparsePyrLKOpticalFlow::create();
-  cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create(cv::DescriptorMatcher::BRUTEFORCE_HAMMING);
 
   // | -------------------- point projection -------------------- |
   mrs_lib::Transformer transformer_;

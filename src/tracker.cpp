@@ -37,7 +37,6 @@ void Tracker::onInit() {
   // | ---------------------- publishers --------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
   pub_projections_ = it.advertise("projections", 1);
-  pub_matches_ = it.advertise("matches", 1);
 
   // | --------------------- tf transformer --------------------- |
   transformer_ = mrs_lib::Transformer("Tracker");
@@ -96,9 +95,6 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     from = closest == cc.buffer.end() - 1 ? closest - 1 : closest;
   }
 
-  // initialize data structure here for further visualization (updated at the last iteration)
-  cv::Mat matched_image;
-
   // iterate over remaining images in the buffer
   for (auto it = from; !cc.points.empty() && it < cc.buffer.end() - 1; ++it) {
     auto prev = it;
@@ -117,48 +113,8 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
       }
     }
 
-    if (filtered_points.empty()) {
-      cc.points.clear();
-      break;
-    }
-
-    // | --------- convert points from to keypoints -------- |
-    std::vector<cv::KeyPoint> keypoints, next_keypoints;
-    cv::KeyPoint::convert(cc.points, keypoints);
-    cv::KeyPoint::convert(filtered_points, next_keypoints);
-
-    // | --------- compute descriptors for each vector of keypoints -------- |
-    cv::Mat descriptors, next_descriptors;
-    orb_->compute(prev->image, keypoints, descriptors);
-    orb_->compute(curr->image, next_keypoints, next_descriptors);
-
-    // | --------- match descriptors between the previous and next image -------- |
-    std::vector<std::vector<cv::DMatch>> knn_matches;
-    matcher_->knnMatch(descriptors, next_descriptors, knn_matches, 2);
-
-    // | --------- filter matches based on Lowe's ratio test -------- |
-    constexpr float ratio_thresh = 0.7f;
-    std::vector<cv::DMatch> good_matches;
-    for (size_t i = 0; i < knn_matches.size(); i++) {
-      if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance) {
-        good_matches.push_back(knn_matches[i][0]);
-      }
-    }
-
-    // if this is the last iteration, update visualization data structure
-    if (curr == cc.buffer.end() - 1) {
-      cv::drawMatches(prev->image, keypoints, curr->image, next_keypoints, good_matches, matched_image);
-    }
-
-    // | --------- extract points from matched points for the next iteration -------- |
-    cc.points.clear();
-    for (const auto& match : good_matches) {
-      cc.points.push_back(next_keypoints[match.trainIdx].pt);
-    }
+    cc.points = std::move(filtered_points);
   }
-
-  // | ------------ visualization ------------ |
-  publishImage(matched_image, msg->header, encoding, pub_matches_);
 
   if (cc.points.empty()) {
     publishImage(image, msg->header, encoding, cc.pub_image);
