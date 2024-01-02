@@ -1,4 +1,5 @@
 #include "tracker.h"
+#include "detect_selector.h"
 
 namespace eagle_track
 {
@@ -82,30 +83,11 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  if (_manual_detect_) {
-    auto callback = [](int event, int x, int y, [[maybe_unused]] int flags, void *data) {
-      auto img_points = reinterpret_cast<CvMatPoints*>(data);
-      cv::Point2f point{static_cast<float>(x), static_cast<float>(y)};
-      if (event == cv::EVENT_LBUTTONDOWN) {
-        img_points->points.push_back(point);
-      }
-
-      cv::circle(img_points->image, point, 5, cv::Scalar(0, 255, 0), -1);
-      cv::imshow("manual_detect", img_points->image);
-    };
-
-    CvMatPoints img_points;
-    img_points.image = image.clone();
-    cv::setMouseCallback("manual_detect", callback, reinterpret_cast<void*>(&img_points));
-    cv::imshow("manual_detect", image);
-    cv::waitKey(0);
-
-    std::lock_guard lock(cc.mutex);
-    cc.detect_points = std::move(img_points.points);
-  }
-
   auto from = cc.buffer.end() - 2;
-  if (cc.should_init && !cc.detect_points.empty()) {
+  if (_manual_detect_ && cc.points.empty()) {
+    cc.points = selectPoints("manual_detect", image);
+    from = cc.buffer.end();
+  } else if (cc.should_init && !cc.detect_points.empty()) {
     ros::Time stamp;
     {
       std::lock_guard lock(cc.mutex);

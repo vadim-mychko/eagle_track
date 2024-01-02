@@ -29,11 +29,6 @@
 namespace eagle_track
 {
 
-struct CvMatPoints {
-  cv::Mat image;
-  std::vector<cv::Point2f> points;
-};
-
 struct CvImageStamped {
   cv::Mat image;
   ros::Time stamp;
@@ -50,7 +45,6 @@ struct CameraContext {
   // | ---------------------- struct parameters --------------------- |
   std::string name; // name of the camera context
   std::vector<cv::Point2f> detect_points; // points from the last detection
-  std::vector<cv::Point2f> manual_points; // points from the last MANUAL detection
   std::vector<cv::Point2f> points; // points calculated from previous optical flow
   ros::Time stamp; // timestamp of the bounding box from the latest detection
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
@@ -98,7 +92,6 @@ private:
   void callbackCameraInfoFront(const sensor_msgs::CameraInfoConstPtr& msg);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
   void callbackDetections(const lidar_tracker::TracksConstPtr& msg);
-  void callbackManualDetections(int event, int x, int y, int flags, void *points);
 
   // | ---------------------- publishers --------------------- |
   image_transport::Publisher pub_projections_;
