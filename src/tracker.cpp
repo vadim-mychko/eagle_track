@@ -20,7 +20,8 @@ void Tracker::onInit() {
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   // | ------------------- dynamic parameters ------------------ |
-  drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", &Tracker::callbackConfig);
+  
+  drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", boost::bind(&Tracker::callbackConfig, this, _1, _2));
 
   if (!pl.loadedSuccessfully() || !drmgr_->loaded_successfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
@@ -58,9 +59,11 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
-void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t) {
-  opt_flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
-  opt_flow_->setMaxLevel(config.maxLevel);
+void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level) {
+  if (level == 1) {
+    opt_flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
+    opt_flow_->setMaxLevel(config.maxLevel);
+  }
 }
 
 void Tracker::callbackImageFront(const sensor_msgs::ImageConstPtr& msg) {

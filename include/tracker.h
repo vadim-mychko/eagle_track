@@ -94,7 +94,7 @@ private:
 
   // | ---------------------- dynamic parameters --------------------- |
   std::unique_ptr<drmgr_t> drmgr_;
-  void callbackConfig(const eagle_track::TrackParamsConfig& drmgr, uint32_t);
+  void callbackConfig(const eagle_track::TrackParamsConfig& drmgr, uint32_t level);
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;
