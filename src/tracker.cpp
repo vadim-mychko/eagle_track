@@ -20,7 +20,6 @@ void Tracker::onInit() {
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   // | ------------------- dynamic parameters ------------------ |
-  
   drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", boost::bind(&Tracker::callbackConfig, this, _1, _2));
 
   if (!pl.loadedSuccessfully() || !drmgr_->loaded_successfully()) {
