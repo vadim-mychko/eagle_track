@@ -1,6 +1,10 @@
 #ifndef TRACKER_H
 #define TRACKER_H
 
+// implements similar functionality to cv::selectROI, but instead of a rectangle
+// produces selected points (with visualization)
+#include "detect_selector.h"
+
 // each ROS nodelet must have these
 #include <ros/ros.h>
 #include <ros/package.h>
@@ -19,12 +23,16 @@
 // custom helper functions from our library
 #include <mrs_lib/param_loader.h>
 #include <mrs_lib/transformer.h>
+#include <mrs_lib/dynamic_reconfigure_mgr.h>
+#include <eagle_track/TrackParamsConfig.h>
 
 // UAV detection custom messages
 #include <lidar_tracker/Tracks.h>
 
 // general boost useful things
 #include <boost/circular_buffer.hpp>
+
+using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
 
 namespace eagle_track
 {
@@ -78,11 +86,15 @@ public:
 
 private:
   // | ---------------------- flags --------------------- |
+  bool _manual_detect_ = false;
   bool initialized_ = false;
 
   // | ---------------------- static parameters --------------------- |
-  bool _manual_detect_ = false;
   double _throttle_period_;
+
+  // | ---------------------- dynamic parameters --------------------- |
+  std::unique_ptr<drmgr_t> drmgr_;
+  void callbackConfig(const eagle_track::TrackParamsConfig& drmgr, uint32_t);
 
   // | ---------------------- subscribers --------------------- |
   ros::Subscriber sub_detections_;
@@ -104,7 +116,7 @@ private:
   cv::Ptr<cv::SparsePyrLKOpticalFlow> opt_flow_ = cv::SparsePyrLKOpticalFlow::create();
 
   // | -------------------- point projection -------------------- |
-  mrs_lib::Transformer transformer_;
+  std::unique_ptr<mrs_lib::Transformer> transformer_;
   void updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc);
 };
 

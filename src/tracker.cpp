@@ -1,5 +1,4 @@
 #include "tracker.h"
-#include "detect_selector.h"
 
 namespace eagle_track
 {
@@ -20,7 +19,10 @@ void Tracker::onInit() {
   pl.loadParam("throttle_period", _throttle_period_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
-  if (!pl.loadedSuccessfully()) {
+  // | ------------------- dynamic parameters ------------------ |
+  drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", &Tracker::callbackConfig);
+
+  if (!pl.loadedSuccessfully() || !drmgr_->loaded_successfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
     ros::shutdown();
   }
@@ -42,9 +44,9 @@ void Tracker::onInit() {
   pub_projections_ = it.advertise("projections", 1);
 
   // | --------------------- tf transformer --------------------- |
-  transformer_ = mrs_lib::Transformer("Tracker");
-  transformer_.setDefaultPrefix(uav_name);
-  transformer_.retryLookupNewest(true);
+  transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
+  transformer_->setDefaultPrefix(uav_name);
+  transformer_->retryLookupNewest(true);
 
   // | --------------------- detection through GUI --------------------- |
   if (_manual_detect_) {
@@ -54,6 +56,11 @@ void Tracker::onInit() {
 
   initialized_ = true;
   NODELET_INFO_ONCE("[Tracker]: Initialized");
+}
+
+void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t) {
+  opt_flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
+  opt_flow_->setMaxLevel(config.maxLevel);
 }
 
 void Tracker::callbackImageFront(const sensor_msgs::ImageConstPtr& msg) {
@@ -204,7 +211,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   }
 
   // | --------- get the transformation from to the camera frame -------- |
-  auto ret = transformer_.getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
+  auto ret = transformer_->getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
     NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;

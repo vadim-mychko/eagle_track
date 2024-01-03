@@ -8,9 +8,13 @@ add_compile_options(-O3)
 add_compile_options(-Wall)
 add_compile_options(-Wextra)
 
+## Find catkin macros and libraries
+## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   image_transport
   roscpp
+  dynamic_reconfigure
   std_msgs
   cv_bridge
   tf2_ros
@@ -23,12 +27,22 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 
+generate_dynamic_reconfigure_options(
+  config/TrackParams.cfg
+)
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES Tracker
   CATKIN_DEPENDS roscpp mrs_lib image_transport std_msgs
 )
 
+###########
+## Build ##
+###########
+
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
 include_directories(include
   include
   ${catkin_INCLUDE_DIRS}
