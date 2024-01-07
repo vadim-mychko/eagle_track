@@ -48,24 +48,24 @@ struct CvImageStamped {
 struct CameraContext {
   // | ---------------------- flags --------------------- |
   bool got_info = false; // whether got camera info for point projection
-  bool should_init = false;
+  bool should_init = false; // whether should initialize tracker (i.e. when the detection comes)
 
   // | ---------------------- struct parameters --------------------- |
   std::string name; // name of the camera context
   std::vector<cv::Point2f> detect_points; // points from the last detection
   std::vector<cv::Point2f> points; // points calculated from previous optical flow
-  ros::Time stamp; // timestamp of the bounding box from the latest detection
+  ros::Time stamp; // timestamp of the last detection
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
 
-  // buffer for storing latest number of images for initializing the tracker with the bounding box
-  // assuming bounding boxes are constructed less frequently than images, therefore buffer for images
+  // buffer for storing latest number of images for initializing the tracker
+  // assuming detections come less frequently than images, therefore buffer for images
   boost::circular_buffer<CvImageStamped> buffer;
 
   // needed for visualization of projections onto the camera frame
   cv::Mat prev_frame;
 
   // mutex to ensure thread safety
-  // also servers as a tool to read "atomically" several variables at once: detection, stamp
+  // also servers as a tool to read "atomically" several variables at once: detect_points, stamp
   std::mutex mutex;
 
   // | ---------------------- subscribers --------------------- |
@@ -86,10 +86,10 @@ public:
 
 private:
   // | ---------------------- flags --------------------- |
-  bool _manual_detect_ = false;
   bool initialized_ = false;
 
   // | ---------------------- static parameters --------------------- |
+  bool _manual_detect_;
   double _throttle_period_;
 
   // | ---------------------- dynamic parameters --------------------- |
