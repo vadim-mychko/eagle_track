@@ -86,12 +86,6 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
   cc.buffer.push_back({grayscale, msg->header.stamp});
 
-  // if there is only one image inside buffer (including current image pushed), then
-  // do not perform any tracking nor visualization
-  if (cc.buffer.size() <= 1) {
-    return;
-  }
-
   auto from = cc.buffer.end();
   if (_manual_detect_ && cc.points.empty()) {
     cc.points = selectPoints("manual_detect", image);
