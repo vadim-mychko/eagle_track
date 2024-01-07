@@ -1,3 +1,6 @@
+#ifndef DETECT_SELECTOR_H
+#define DETECT_SELECTOR_H
+
 // This file is part of OpenCV project (which was modified, see cv::selectROI).
 // It is subject to the license terms in the LICENSE file found at https://github.com/opencv/opencv/blob/4.4.0/LICENSE.
 #include <opencv2/opencv.hpp>
@@ -33,7 +36,6 @@ std::vector<Point2f> DetectSelector::select(const String& windowName, Mat img, b
   }
 
   key = 0;
-  // set the drawing mode
   // show the image and give feedback to user
   imshow(windowName, img);
   // copy the data, rectangle should be drawn in the fresh image
@@ -83,3 +85,5 @@ std::vector<Point2f> selectPoints(const String& windowName, InputArray img, bool
   DetectSelector selector;
   return selector.select(windowName, img.getMat(), printNotice);
 }
+
+#endif // DETECT_SELECTOR_H

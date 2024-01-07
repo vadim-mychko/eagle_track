@@ -92,7 +92,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  auto from = cc.buffer.end() - 2;
+  auto from = cc.buffer.end();
   if (_manual_detect_ && cc.points.empty()) {
     cc.points = selectPoints("manual_detect", image);
     from = cc.buffer.end();
@@ -107,16 +107,13 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
     // find the closest image in terms of timestamps
     double target = stamp.toSec();
-    auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
       [&target](const CvImageStamped& a, const CvImageStamped& b) {
         return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
     });
-
-    // starting image has to be before the last image in the buffer
-    from = closest == cc.buffer.end() - 1 ? closest - 1 : closest;
   }
 
-  // iterate over remaining images in the buffer
+  // iterate over remaining images in the buffer if needed
   for (auto it = from; !cc.points.empty() && it < cc.buffer.end() - 1; ++it) {
     auto prev = it;
     auto curr = it + 1;
