@@ -62,6 +62,11 @@ void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint3
   if (level == 1) {
     opt_flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
     opt_flow_->setMaxLevel(config.maxLevel);
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, config.maxCount, config.epsilon);
+    opt_flow_->setTermCriteria(criteria);
+    opt_flow_->setFlags((config.useInitialFlow ? cv::OPTFLOW_USE_INITIAL_FLOW : 0)
+                      | (config.getMinEigenvals ? cv::OPTFLOW_LK_GET_MIN_EIGENVALS : 0));
+    opt_flow_->setMinEigThreshold(config.minEigThreshold);
   }
 }
 
