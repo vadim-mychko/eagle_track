@@ -86,7 +86,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
   cc.buffer.push_back({grayscale, msg->header.stamp});
 
-  auto from = cc.buffer.end();
+  auto from = cc.buffer.end() - 2;
   if (_manual_detect_ && cc.points.empty()) {
     cc.points = selectPoints("manual_detect", image);
     from = cc.buffer.end();
