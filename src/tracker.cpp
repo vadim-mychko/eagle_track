@@ -33,7 +33,7 @@ void Tracker::onInit() {
 
   // | ---------------------- subscribers --------------------- |
   image_transport::ImageTransport it(nh);
-  image_transport::TransportHints hints("compressed");
+  image_transport::TransportHints hints("raw");
 
   front_.sub_image = it.subscribe("camera_front", 1, &Tracker::callbackImageFront, this, hints);
   front_.sub_info = nh.subscribe("camera_front_info", 1, &Tracker::callbackCameraInfoFront, this);
@@ -93,9 +93,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
       }
 
       cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+      cc.tracker = cv::TrackerKCF::create();
       success = cc.tracker->init(image, cc.bbox);
     }
-  } else if (cc.should_init && cc.detect_bbox.width > 0 && cc.detect_bbox.height > 0) {
+  } else if (cc.should_init && cc.detect_bbox.width > 1 && cc.detect_bbox.height > 1) {
     ros::Time stamp;
     {
       std::lock_guard lock(cc.mutex);
@@ -111,6 +112,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
         return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
     });
 
+    cc.tracker = cv::TrackerKCF::create();
     success = cc.tracker->init(closest->image, cc.bbox);
     for (auto it = closest + 1; it < cc.buffer.end(); ++it) {
       success = cc.tracker->update(it->image, cc.bbox);
@@ -120,7 +122,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   if (success) {
     // we don't want to modify the original image, therefore we need to copy it
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, cc.bbox, cv::Scalar(255, 0, 0), 3);
+    cv::rectangle(track_image, cc.bbox, cv::Scalar(255, 0, 0), 2);
     publishImage(track_image, msg->header, encoding, cc.pub_image);
   } else {
     publishImage(image, msg->header, encoding, cc.pub_image);
