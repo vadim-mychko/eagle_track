@@ -58,7 +58,7 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
-void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level) {
+void Tracker::callbackConfig([[maybe_unused]] const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {
 
 }
 
@@ -77,7 +77,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   cc.buffer.push_back({image, msg->header.stamp});
 
-  bool success = cc.bbox.width > 0 && cc.bbox.height > 0 && cc.tracker->update(image, cc.bbox);
+  bool success = cc.tracker->update(image, cc.bbox);
   if (_manual_detect_ && !success) {
     auto points = selectPoints("manual_detect", image);
     if (points.size() >= 2) {
@@ -89,7 +89,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
         min_x = std::min(min_x, point.x);
         min_y = std::min(min_y, point.y);
         max_x = std::max(max_x, point.x);
-        max_y = std::min(max_y, point.y);
+        max_y = std::max(max_y, point.y);
       }
 
       cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
@@ -120,7 +120,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   if (success) {
     // we don't want to modify the original image, therefore we need to copy it
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, cc.bbox, cv::Scalar(255, 0, 0), -1);
+    cv::rectangle(track_image, cc.bbox, cv::Scalar(255, 0, 0), 3);
     publishImage(track_image, msg->header, encoding, cc.pub_image);
   } else {
     publishImage(image, msg->header, encoding, cc.pub_image);
