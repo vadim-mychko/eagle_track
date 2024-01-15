@@ -77,7 +77,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   cc.buffer.push_back({image, msg->header.stamp});
 
-  bool success = cc.tracker->update(image, cc.bbox);
+  bool success = cc.bbox.width > 0 && cc.bbox.height > 0 && cc.tracker->update(image, cc.bbox);
   if (_manual_detect_ && !success) {
     auto points = selectPoints("manual_detect", image);
     if (points.size() >= 2) {
