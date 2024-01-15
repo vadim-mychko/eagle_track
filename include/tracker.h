@@ -13,7 +13,7 @@
 // some OpenCV includes
 #include <opencv2/opencv.hpp>
 #include <opencv2/features2d.hpp>
-#include <opencv2/video/tracking.hpp>
+#include <opencv2/tracking.hpp>
 
 // ROS includes for working with OpenCV and images
 #include <image_transport/image_transport.h>
@@ -52,17 +52,15 @@ struct CameraContext {
 
   // | ---------------------- struct parameters --------------------- |
   std::string name; // name of the camera context
-  std::vector<cv::Point2f> detect_points; // points from the last detection
-  std::vector<cv::Point2f> points; // points calculated from previous optical flow
+  cv::Rect2d detect_bbox;
+  cv::Rect2d bbox;
   ros::Time stamp; // timestamp of the last detection
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
+  cv::Ptr<cv::Tracker> tracker = cv::TrackerKCF::create();
 
   // buffer for storing latest number of images for initializing the tracker
   // assuming detections come less frequently than images, therefore buffer for images
   boost::circular_buffer<CvImageStamped> buffer;
-
-  // needed for visualization of projections onto the camera frame
-  cv::Mat prev_frame;
 
   // mutex to ensure thread safety
   // also servers as a tool to read "atomically" several variables at once: detect_points, stamp
@@ -113,7 +111,6 @@ private:
 
   // | -------------------- tracker essentials -------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
-  cv::Ptr<cv::SparsePyrLKOpticalFlow> opt_flow_ = cv::SparsePyrLKOpticalFlow::create();
 
   // | -------------------- point projection -------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_;

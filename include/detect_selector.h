@@ -14,10 +14,10 @@ class DetectSelector {
 public:
   struct handlerT {
     Mat image;
-    std::vector<Point2f> points;
+    std::vector<Point2d> points;
   } selectorParams;
 
-  std::vector<Point2f> select(const String& windowName, Mat img, bool printNotice);
+  std::vector<Point2d> select(const String& windowName, Mat img, bool printNotice);
 
 private:
   // save the keypressed character
@@ -28,7 +28,7 @@ private:
   void opencv_mouse_callback(int event, int x, int y, int);
 };
 
-std::vector<Point2f> DetectSelector::select(const String& windowName, Mat img, bool printNotice) {
+std::vector<Point2d> DetectSelector::select(const String& windowName, Mat img, bool printNotice) {
   if (printNotice) {
     // show notice to user
     printf("Select a ROI and then press SPACE or ENTER button!\n");
@@ -75,13 +75,13 @@ void DetectSelector::mouseHandler(int event, int x, int y, int flags, void *para
 
 void DetectSelector::opencv_mouse_callback(int event, int x, int y, int) {
   if (event == EVENT_LBUTTONDOWN) {
-    selectorParams.points.push_back({static_cast<float>(x), static_cast<float>(y)});
+    selectorParams.points.push_back({static_cast<double>(x), static_cast<double>(y)});
   }
 }
 
 }; // namespace
 
-std::vector<Point2f> selectPoints(const String& windowName, InputArray img, bool printNotice = true) {
+std::vector<Point2d> selectPoints(const String& windowName, InputArray img, bool printNotice = true) {
   DetectSelector selector;
   return selector.select(windowName, img.getMat(), printNotice);
 }

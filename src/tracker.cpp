@@ -59,15 +59,7 @@ void Tracker::onInit() {
 }
 
 void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level) {
-  if (level == 1) {
-    opt_flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
-    opt_flow_->setMaxLevel(config.maxLevel);
-    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, config.maxCount, config.epsilon);
-    opt_flow_->setTermCriteria(criteria);
-    opt_flow_->setFlags((config.useInitialFlow ? cv::OPTFLOW_USE_INITIAL_FLOW : 0)
-                      | (config.getMinEigenvals ? cv::OPTFLOW_LK_GET_MIN_EIGENVALS : 0));
-    opt_flow_->setMinEigThreshold(config.minEigThreshold);
-  }
+
 }
 
 void Tracker::callbackImageFront(const sensor_msgs::ImageConstPtr& msg) {
@@ -83,66 +75,55 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
 
-  // store the last bgr image for visualization of projections onto the camera frame
-  cc.prev_frame = image;
+  cc.buffer.push_back({image, msg->header.stamp});
 
-  // push grayscale image into the buffer
-  cv::Mat grayscale;
-  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
-  cc.buffer.push_back({grayscale, msg->header.stamp});
+  bool success = cc.tracker->update(image, cc.bbox);
+  if (_manual_detect_ && !success) {
+    auto points = selectPoints("manual_detect", image);
+    if (points.size() >= 2) {
+      double min_x = cc.model.fullResolution().width;
+      double min_y = cc.model.fullResolution().height;
+      double max_x = 0.0;
+      double max_y = 0.0;
+      for (auto& point : points) {
+        min_x = std::min(min_x, point.x);
+        min_y = std::min(min_y, point.y);
+        max_x = std::max(max_x, point.x);
+        max_y = std::min(max_y, point.y);
+      }
 
-  auto from = cc.buffer.end() - 2;
-  if (_manual_detect_ && cc.points.empty()) {
-    cc.points = selectPoints("manual_detect", image);
-    from = cc.buffer.end();
-  } else if (cc.should_init && !cc.detect_points.empty()) {
+      cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+      success = cc.tracker->init(image, cc.bbox);
+    }
+  } else if (cc.should_init && cc.detect_bbox.width > 0 && cc.detect_bbox.height > 0) {
     ros::Time stamp;
     {
       std::lock_guard lock(cc.mutex);
       cc.should_init = false;
-      cc.points = std::move(cc.detect_points);
+      cc.bbox = std::move(cc.detect_bbox);
       stamp = cc.stamp;
     }
 
     // find the closest image in terms of timestamps
     double target = stamp.toSec();
-    from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    auto closest = std::min_element(cc.buffer.begin(), cc.buffer.end(),
       [&target](const CvImageStamped& a, const CvImageStamped& b) {
         return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
     });
-  }
 
-  // iterate over remaining images in the buffer if needed
-  for (auto it = from; !cc.points.empty() && it < cc.buffer.end() - 1; ++it) {
-    auto prev = it;
-    auto curr = it + 1;
-
-    // | --------- perform optical flow for the two images -------- |
-    std::vector<cv::Point2f> next_points;
-    std::vector<uchar> status;
-    opt_flow_->calc(prev->image, curr->image, cc.points, next_points, status);
-
-    // | --------- filter points by their status after the optical flow -------- |
-    std::vector<cv::Point2f> filtered_points;
-    for (std::size_t i = 0; i < next_points.size(); ++i) {
-      if (status[i] == 1) {
-        filtered_points.push_back(next_points[i]);
-      }
+    success = cc.tracker->init(closest->image, cc.bbox);
+    for (auto it = closest + 1; it < cc.buffer.end(); ++it) {
+      success = cc.tracker->update(it->image, cc.bbox);
     }
-
-    cc.points = std::move(filtered_points);
   }
 
-  if (cc.points.empty()) {
-    publishImage(image, msg->header, encoding, cc.pub_image);
-  } else {
+  if (success) {
     // we don't want to modify the original image, therefore we need to copy it
     cv::Mat track_image = image.clone();
-    for (const auto& point : cc.points) {
-      cv::circle(track_image, point, 5, cv::Scalar(255, 0, 0), -1);
-    }
-
+    cv::rectangle(track_image, cc.bbox, cv::Scalar(255, 0, 0), -1);
     publishImage(track_image, msg->header, encoding, cc.pub_image);
+  } else {
+    publishImage(image, msg->header, encoding, cc.pub_image);
   }
 }
 
@@ -186,11 +167,11 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
 }
 
 void Tracker::publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc) {
-  if (cc.prev_frame.empty()) {
+  if (cc.buffer.empty()) {
     return;
   }
 
-  cv::Mat project_image = cc.prev_frame.clone();
+  cv::Mat project_image = cc.buffer.back().image.clone();
   for (const cv::Point2d& point : projections) {
     cv::circle(project_image, point, 5, cv::Scalar(0, 0, 255), -1);
   }
@@ -225,6 +206,11 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   double cam_width = cc.model.fullResolution().width;
   double cam_height = cc.model.fullResolution().height;
 
+  double min_x = cam_width;
+  double min_y = cam_height;
+  double max_x = 0.0;
+  double max_y = 0.0;
+
   std::vector<cv::Point2f> projections;
   projections.reserve(cloud.points.size());
   for (const pcl::PointXYZ& point : cloud.points) {
@@ -242,6 +228,10 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
     // check if the projected point is inside the camera frame
     if (pt2d_unrec.x >= 0 && pt2d_unrec.x < cam_width
           && pt2d_unrec.y >= 0 && pt2d_unrec.y < cam_height) {
+      min_x = std::min(min_x, pt2d_unrec.x);
+      min_y = std::min(min_y, pt2d_unrec.y);
+      max_x = std::max(max_x, pt2d_unrec.x);
+      max_y = std::max(max_y, pt2d_unrec.y);
       projections.push_back(pt2d_unrec);
     }
   }
@@ -249,7 +239,7 @@ void Tracker::updateDetection(const sensor_msgs::PointCloud2& points, CameraCont
   {
     std::lock_guard lock(cc.mutex);
     cc.should_init = true;
-    cc.detect_points = projections;
+    cc.detect_bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
     cc.stamp = points.header.stamp;
   }
 
