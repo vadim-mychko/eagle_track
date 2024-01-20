@@ -53,10 +53,9 @@ struct CameraContext {
   // | ---------------------- struct parameters --------------------- |
   std::string name; // name of the camera context
   cv::Rect2d detect_bbox;
-  cv::Rect2d bbox;
   ros::Time stamp; // timestamp of the last detection
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
-  cv::Ptr<cv::Tracker> tracker = cv::TrackerKCF::create();
+  cv::Ptr<cv::Tracker> tracker = cv::TrackerCSRT::create();
 
   // buffer for storing latest number of images for initializing the tracker
   // assuming detections come less frequently than images, therefore buffer for images

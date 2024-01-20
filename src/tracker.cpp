@@ -77,8 +77,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   cc.buffer.push_back({image, msg->header.stamp});
 
-  bool success = cc.tracker->update(image, cc.bbox);
+  cv::Rect2d bbox;
+  bool success = cc.tracker->update(image, bbox);
   if (_manual_detect_ && !success) {
+    cc.tracker = cv::TrackerCSRT::create();
     auto points = selectPoints("manual_detect", image);
     if (points.size() >= 2) {
       double min_x = cc.model.fullResolution().width;
@@ -92,16 +94,15 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
         max_y = std::max(max_y, point.y);
       }
 
-      cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-      cc.tracker = cv::TrackerKCF::create();
-      success = cc.tracker->init(image, cc.bbox);
+      bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+      success = cc.tracker->init(image, bbox);
     }
   } else if (cc.should_init && cc.detect_bbox.width > 1 && cc.detect_bbox.height > 1) {
     ros::Time stamp;
     {
       std::lock_guard lock(cc.mutex);
       cc.should_init = false;
-      cc.bbox = std::move(cc.detect_bbox);
+      bbox = std::move(cc.detect_bbox);
       stamp = cc.stamp;
     }
 
@@ -112,17 +113,17 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
         return std::abs(a.stamp.toSec() - target) < std::abs(b.stamp.toSec() - target);
     });
 
-    cc.tracker = cv::TrackerKCF::create();
-    success = cc.tracker->init(closest->image, cc.bbox);
+    cc.tracker = cv::TrackerCSRT::create();
+    success = cc.tracker->init(closest->image, bbox);
     for (auto it = closest + 1; it < cc.buffer.end(); ++it) {
-      success = cc.tracker->update(it->image, cc.bbox);
+      success = cc.tracker->update(it->image, bbox);
     }
   }
 
   if (success) {
     // we don't want to modify the original image, therefore we need to copy it
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, cc.bbox, cv::Scalar(255, 0, 0), 2);
+    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), 2);
     publishImage(track_image, msg->header, encoding, cc.pub_image);
   } else {
     publishImage(image, msg->header, encoding, cc.pub_image);
