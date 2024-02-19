@@ -1,0 +1,3 @@
+extra_resource_paths: [
+  "eagle_gazebo_resources",
+]
