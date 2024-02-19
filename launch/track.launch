@@ -34,8 +34,9 @@
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <remap from="~camera_front/compressed" to="/usb_cam/image_raw/compressed" />
-      <remap from="~camera_front_info" to="/usb_cam/camera_info" />
+      <param name="image_type" type="string" value="raw" />
+      <remap from="~camera_front" to="bluefox_front/image_raw" />
+      <remap from="~camera_front_info" to="bluefox_front/camera_info" />
       <remap from="~detections" to="lidar_tracker/tracks" />
 
       <!-- Publishers -->
