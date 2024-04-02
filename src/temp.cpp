@@ -1,7 +1,5 @@
 #include "temp.h"
 
-#include <opencv2/highgui/highgui.hpp>
-
 namespace eagle_track
 {
 
@@ -19,6 +17,7 @@ void Tracker::onInit() {
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   const auto image_type = pl.loadParam2<std::string>("image_type");
   pl.loadParam("throttle_period", _throttle_period_);
+  const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   // | -------------------------- dynamic parameters ------------------------ |
   drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", boost::bind(&Tracker::callbackConfig, this, _1, _2));
@@ -32,17 +31,29 @@ void Tracker::onInit() {
   image_transport::ImageTransport it(nh);
   image_transport::TransportHints hints(image_type);
 
-  front_.sub_image = it.subscribe("camera_front", 1, boost::bind(&Tracker::callbackImage, this, _1, front_), ros::VoidPtr(), hints);
-  front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, front_));
-  down_.sub_image = it.subscribe("camera_down", 1, boost::bind(&Tracker::callbackImage, this, _1, down_), ros::VoidPtr(), hints);
-  down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, down_));
-  sub_detection_ = nh.subscribe("detection", 1, &Tracker::callbackDetection, this);
+  front_.sub_image.subscribe(it, "camera_front", 1, hints);
+  front_.sub_image.registerCallback(boost::bind(&Tracker::callbackImage, this, _1, std::ref(front_)));
+  front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
+
+  down_.sub_image.subscribe(it, "camera_down", 1, hints);
+  down_.sub_image.registerCallback(boost::bind(&Tracker::callbackImage, this, _1, std::ref(down_)));
+  down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
+
+  sub_detection_.subscribe(nh, "detection", 1);
 
   // | ----------------------------- publishers ----------------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
   front_.pub_projections = it.advertise("projections_front", 1);
+
   down_.pub_image = it.advertise("tracker_down", 1);
   down_.pub_projections = it.advertise("projections_down", 1);
+
+  // | -------------------------- synchronization --------------------------- |
+  front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(image_buffer_size), front_.sub_image, sub_detection_);
+  front_.sync->registerCallback(boost::bind(&Tracker::callbackImageDetection, this, _1, _2, std::ref(front_)));
+
+  down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(image_buffer_size), down_.sub_image, sub_detection_);
+  down_.sync->registerCallback(boost::bind(&Tracker::callbackImageDetection, this, _1, _2, std::ref(down_)));
 
   // | --------------------------- tf transformer --------------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
