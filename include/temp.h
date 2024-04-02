@@ -46,7 +46,7 @@ class Tracker : public nodelet::Nodelet {
 public:
   virtual void onInit();
 
-private:
+protected:
   // | -------------------------------- flags ------------------------------- |
   bool initialized_ = false;
 
