@@ -12,4 +12,4 @@ trajectory:
   uavs:
     uav91:
       filename: "circle_small.txt"
-      offset: [2.0, 0.0, 0.0, 1.57]      # [x, y, z, heading]  heading = pi / 2
+      offset: [-5.0, 0.0, 0.0, 1.57]      # [x, y, z, heading]  heading = pi / 2

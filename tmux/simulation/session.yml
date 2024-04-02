@@ -51,7 +51,7 @@ windows:
         - export UAV_NAME=uav91; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
         - export UAV_NAME=uav2; waitForHw; roslaunch mrs_uav_autostart automatic_start.launch
         - export UAV_NAME=uav2; waitForControl; rosservice call /$UAV_NAME/hw_api/arming 1; sleep 2; rosservice call /$UAV_NAME/hw_api/offboard
-        - waitForOffboard; sleep 45; roslaunch mrs_uav_trajectory_loader load.launch config:=./config/trajectories.yaml path:=$TRACK_PATH/tmux/simulation/config
+        - waitForOffboard; sleep 15; roslaunch mrs_uav_trajectory_loader load.launch config:=./config/trajectories.yaml path:=$TRACK_PATH/tmux/simulation/config
   - rviz:
       layout: tiled
       panes:
