@@ -119,17 +119,91 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cc.prev_points = std::move(filtered_points);
   cc.prev_image = grayscale;
 
+  // | ---------------------------- visualization --------------------------- |
   if (cc.prev_points.empty()) {
-    publishImage(image, msg->header, encoding, cc);
+    publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
-    // we don't want to modify the original image, therefore we need to copy it
     cv::Mat track_image = image.clone();
     for (const auto& point : cc.prev_points) {
-      cv::circle(track_image, point, 3, cv::Scalar(0, 0, 255), -1);
+      cv::circle(track_image, point, 3, cv::Scalar(255, 0, 0), -1);
     }
 
-    publishImage(track_image, msg->header, encoding, cc);
+    publishImage(track_image, msg->header, encoding, cc.pub_image);
   }
+}
+
+void Tracker::callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, const lidar_tracker::TracksConstPtr& det_msg, CameraContext& cc) {
+  if (!initialized_) {
+    return;
+  }
+
+  if (!cc.got_camera_info) {
+    callbackImage(img_msg, cc);
+    return;
+  }
+
+  // | -------------------------- get the pointcloud ------------------------ |
+  auto it = std::find_if(det_msg->tracks.cbegin(), det_msg->tracks.cend(), [](const lidar_tracker::Track& track) {
+    return track.selected;
+  });
+  const sensor_msgs::PointCloud2 points = it->points;
+
+  // | ------------- get the transformation to the camera frame ------------- |
+  auto ret = transformer_->getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
+  if (!ret.has_value()) {
+    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
+    return;
+  }
+
+  // | --------------- convert PointCloud2 to pcl::PointCloud --------------- |
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(points, cloud);
+
+  // | ------------- transform the pointcloud to the camera frame ----------- |
+  pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
+
+  double cam_width = cc.model.fullResolution().width;
+  double cam_height = cc.model.fullResolution().height;
+
+  std::vector<cv::Point2f> projections;
+  projections.reserve(cloud.points.size());
+  for (const auto& point : cloud.points) {
+    if (point.z < 0) {
+      continue;
+    }
+
+    // | ---------------- backproject the point from 3D to 2D --------------- |
+    cv::Point2d pt2d = cc.model.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
+    // | ---------------- unrectify the 2D point coordinates ---------------- |
+    // This is done to correct for camera distortion. It has no effect in simulation, where the camera model
+    // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
+    cv::Point2d pt2d_unrec = cc.model.unrectifyPoint(pt2d);
+
+    // check if the projected point is inside the camera frame
+    if (pt2d_unrec.x >= 0 && pt2d_unrec.x < cam_width && pt2d_unrec.y >= 0 && pt2d_unrec.y < cam_height) {
+      projections.push_back(pt2d_unrec);
+    }
+  }
+
+  const std::string encoding = "bgr8";
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(img_msg, encoding);
+  cv::Mat image = bridge_image_ptr->image;
+
+  cv::Mat grayscale;
+  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
+
+  cc.prev_image = grayscale;
+  cc.prev_points = std::move(projections);
+
+
+  // | ---------------------------- visualization --------------------------- |
+  cv::Mat track_image = image.clone();
+  for (const auto& point : cc.prev_points) {
+    cv::circle(track_image, point, 3, cv::Scalar(0, 0, 255), -1);
+  }
+
+  publishImage(track_image, img_msg->header, encoding, cc.pub_image);
+  publishImage(track_image, img_msg->header, encoding, cc.pub_projections);
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
@@ -142,7 +216,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
   NODELET_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
 }
 
-void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc) {
+void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
   // Prepare a cv_bridge image to be converted to the ROS message
   cv_bridge::CvImage bridge_image_out;
   bridge_image_out.image = image.getMat();
@@ -151,7 +225,7 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
 
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-  cc.pub_image.publish(out_msg);
+  pub.publish(out_msg);
 }
 
 } // namespace eagle_track

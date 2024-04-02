@@ -80,8 +80,7 @@ private:
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
 
   // | ----------------------------- publishers ----------------------------- |
-  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
-  void publishProjections(const std::vector<cv::Point2f>& projections, CameraContext& cc);
+  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
 
   // | ------------------------- tracker essentials ------------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
