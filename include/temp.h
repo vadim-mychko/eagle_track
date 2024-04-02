@@ -7,6 +7,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/tracking.hpp>
+#include <cv_bridge/cv_bridge.h>
 
 #include <image_transport/image_transport.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -20,7 +21,6 @@
 #include <mrs_lib/dynamic_reconfigure_mgr.h>
 
 #include <eagle_track/TrackParamsConfig.h>
-
 #include <lidar_tracker/Tracks.h>
 
 namespace eagle_track
