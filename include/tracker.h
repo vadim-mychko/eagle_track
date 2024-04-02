@@ -1,6 +1,8 @@
 #ifndef TRACKER_H
 #define TRACKER_H
 
+#include "detect_selector.h"
+
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <nodelet/nodelet.h>
@@ -47,8 +49,9 @@ struct CameraContext
 
   // | ------------------------- context essentials ------------------------- |
   std::string name;                         // name of the camera context
-  std::vector<cv::Point2f> points;          // points calculated from previous optical flow
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
+  std::vector<cv::Point2f> prev_points;     // points calculated from previous optical flow
+  cv::Mat prev_image;                       // previous image for calculating optical flow
 
   CameraContext(const std::string& name);
 };

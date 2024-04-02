@@ -82,6 +82,56 @@ void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint3
   }
 }
 
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
+  if (!initialized_) {
+    return;
+  }
+
+  const std::string encoding = "bgr8";
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
+  cv::Mat image = bridge_image_ptr->image;
+
+  cv::Mat grayscale;
+  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
+
+  if (cc.prev_image.empty()) {
+    cc.prev_image = grayscale;
+    return;
+  }
+
+  if (_manual_detect_ && cc.prev_points.empty()) {
+    cc.prev_points = selectPoints("manual_detect", cc.prev_image);
+  }
+
+  // | --------------- perform optical flow for the two images -------------- |
+  std::vector<cv::Point2f> next_points;
+  std::vector<uchar> status;
+  flow_->calc(cc.prev_image, grayscale, cc.prev_points, next_points, status);
+
+  // | --------- filter points by their status after the optical flow ------- |
+  std::vector<cv::Point2f> filtered_points;
+  for (std::size_t i = 0; i < next_points.size(); ++i) {
+    if (status[i] == 1) {
+      filtered_points.push_back(next_points[i]);
+    }
+  }
+
+  cc.prev_points = std::move(filtered_points);
+  cc.prev_image = grayscale;
+
+  if (cc.prev_points.empty()) {
+    publishImage(image, msg->header, encoding, cc);
+  } else {
+    // we don't want to modify the original image, therefore we need to copy it
+    cv::Mat track_image = image.clone();
+    for (const auto& point : cc.prev_points) {
+      cv::circle(track_image, point, 3, cv::Scalar(0, 0, 255), -1);
+    }
+
+    publishImage(track_image, msg->header, encoding, cc);
+  }
+}
+
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
   if (!initialized_ || cc.got_camera_info) {
     return;
