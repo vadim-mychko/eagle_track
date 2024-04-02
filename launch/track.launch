@@ -39,7 +39,7 @@
       <remap from="~camera_front_info" to="bluefox_front/camera_info" />
       <remap from="~camera_down" to="bluefox_down/image_raw" />
       <remap from="~camera_down_info" to="bluefox_down/camera_info" />
-      <remap from="~detections" to="lidar_tracker/tracks" />
+      <remap from="~detection" to="lidar_tracker/tracks" />
 
       <!-- Publishers -->
       <remap from="~tracker_front" to="~tracker_front" />
