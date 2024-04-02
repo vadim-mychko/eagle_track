@@ -13,7 +13,7 @@
 
 #include <image_transport/image_transport.h>
 #include <image_geometry/pinhole_camera_model.h>
-#include <subscriber_filter.h>
+#include <image_transport/subscriber_filter.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
