@@ -46,7 +46,7 @@ std::vector<Point2f> DetectSelector::select(const String& windowName, Mat img, b
   while (!(key == 32 || key == 27 || key == 13)) {
     // draw the selected object
     for (auto& point : selectorParams.points) {
-      circle(selectorParams.image, point, 5, Scalar(255, 0, 0), -1);
+      circle(selectorParams.image, point, 3, Scalar(0, 0, 255), -1);
     }
 
     imshow(windowName, selectorParams.image);
