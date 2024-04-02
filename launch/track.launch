@@ -43,7 +43,9 @@
 
       <!-- Publishers -->
       <remap from="~tracker_front" to="~tracker_front" />
-      <remap from="~projections" to="~projections" />
+      <remap from="~projections_front" to="~projections_front" />
+      <remap from="~tracker_down" to="~tracker_down" />
+      <remap from="~projections_down" to="~projections_down" />
 
     </node>
 
