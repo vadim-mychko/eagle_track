@@ -1,2 +1,5 @@
 # period for logging messages (in seconds)
 throttle_period: 1.0
+
+# number of images stored in buffer for synchronization between lidar & camera
+image_buffer_size: 5
