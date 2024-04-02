@@ -70,6 +70,17 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
+void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level) {
+  if (level == 1) {
+    flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
+    flow_->setMaxLevel(config.maxLevel);
+    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, config.maxCount, config.epsilon);
+    flow_->setTermCriteria(criteria);
+    flow_->setFlags((config.useInitialFlow ? cv::OPTFLOW_USE_INITIAL_FLOW : 0)
+                      | (config.getMinEigenvals ? cv::OPTFLOW_LK_GET_MIN_EIGENVALS : 0));
+    flow_->setMinEigThreshold(config.minEigThreshold);
+  }
+}
 
 } // namespace eagle_track
 
