@@ -195,7 +195,6 @@ void Tracker::callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, 
   cc.prev_image = grayscale;
   cc.prev_points = std::move(projections);
 
-
   // | ---------------------------- visualization --------------------------- |
   cv::Mat track_image = image.clone();
   for (const auto& point : cc.prev_points) {
