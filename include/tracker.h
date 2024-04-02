@@ -73,21 +73,20 @@ private:
   // | ---------------------------- subscribers ----------------------------- |
   message_filters::Subscriber<lidar_tracker::Tracks> sub_detection_;
   void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);
-  void callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, const lidar_tracker::TracksConstPtr& det_msg, const CameraContext& cc);
+  void callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, const lidar_tracker::TracksConstPtr& det_msg, CameraContext& cc);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
 
   // | ----------------------------- publishers ----------------------------- |
-  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const CameraContext& cc);
-  void publishProjections(const std::vector<cv::Point2f>& projections, const CameraContext& cc);
+  void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc);
+  void publishProjections(const std::vector<cv::Point2f>& projections, CameraContext& cc);
 
   // | ------------------------- tracker essentials ------------------------- |
   CameraContext front_ = CameraContext("FrontCamera");
   CameraContext down_ = CameraContext("DownCamera");
   cv::Ptr<cv::SparsePyrLKOpticalFlow> flow_ = cv::SparsePyrLKOpticalFlow::create();
 
-  // | -------------------------- point projection -------------------------- |
+  // | ------------------------ coordinate transforms ----------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_;
-  void updateDetection(const sensor_msgs::PointCloud2& points, CameraContext& cc);
 };
 
 } // namespace eagle_track

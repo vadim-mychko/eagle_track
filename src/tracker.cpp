@@ -55,7 +55,7 @@ void Tracker::onInit() {
   down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(image_buffer_size), down_.sub_image, sub_detection_);
   down_.sync->registerCallback(boost::bind(&Tracker::callbackImageDetection, this, _1, _2, std::ref(down_)));
 
-  // | --------------------------- tf transformer --------------------------- |
+  // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
   transformer_->setDefaultPrefix(uav_name);
   transformer_->retryLookupNewest(true);
@@ -82,7 +82,17 @@ void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint3
   }
 }
 
-void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, const CameraContext& cc) {
+void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
+  if (!initialized_ || cc.got_camera_info) {
+    return;
+  }
+
+  cc.got_camera_info = true;
+  cc.model.fromCameraInfo(*msg);
+  NODELET_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
+}
+
+void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, CameraContext& cc) {
   // Prepare a cv_bridge image to be converted to the ROS message
   cv_bridge::CvImage bridge_image_out;
   bridge_image_out.image = image.getMat();
