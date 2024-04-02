@@ -103,6 +103,11 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     cc.prev_points = selectPoints("manual_detect", cc.prev_image);
   }
 
+  if (cc.prev_points.empty()) {
+    publishImage(image, msg->header, encoding, cc.pub_image);
+    return;
+  }
+
   // | --------------- perform optical flow for the two images -------------- |
   std::vector<cv::Point2f> next_points;
   std::vector<uchar> status;
