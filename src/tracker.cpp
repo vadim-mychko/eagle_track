@@ -49,11 +49,7 @@ void Tracker::onInit() {
   down_.pub_projections = it.advertise("projections_down", 1);
 
   // | -------------------------- synchronization --------------------------- |
-  front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(image_buffer_size), front_.sub_image, sub_detection_);
-  front_.sync->registerCallback(boost::bind(&Tracker::callbackImageDetection, this, _1, _2, std::ref(front_)));
-
-  down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(image_buffer_size), down_.sub_image, sub_detection_);
-  down_.sync->registerCallback(boost::bind(&Tracker::callbackImageDetection, this, _1, _2, std::ref(down_)));
+  
 
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");

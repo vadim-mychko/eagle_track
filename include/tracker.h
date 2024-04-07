@@ -22,14 +22,19 @@
 #include <mrs_lib/transformer.h>
 #include <mrs_lib/dynamic_reconfigure_mgr.h>
 
+#include <boost/circular_buffer.hpp>
+
 #include <eagle_track/TrackParamsConfig.h>
 #include <lidar_tracker/Tracks.h>
 
 namespace eagle_track
 {
 
-using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
-using policy_t = message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, lidar_tracker::Tracks>;
+struct CvImageStamped
+{
+  cv::Mat image;
+  ros::Time stamp;
+};
 
 struct CameraContext
 {
@@ -45,7 +50,10 @@ struct CameraContext
   image_transport::Publisher pub_projections;
 
   // | -------------------------- synchronization --------------------------- |
-  std::unique_ptr<message_filters::Synchronizer<policy_t>> sync;
+  std::vector<cv::Point2f> detection_points;     // points from the latest detection
+  ros::Time detection_stamp;                     // timestamp of the latest detection
+  std::mutex sync_mutex;                         // mutex for synchronization between callbacks
+  boost::circular_buffer<CvImageStamped> buffer; // buffer for storing the latest images from the image callback
 
   // | ------------------------- context essentials ------------------------- |
   std::string name;                         // name of the camera context
@@ -70,13 +78,14 @@ private:
   double _throttle_period_;
 
   // | -------------------------- dynamic parameters ------------------------ |
+  using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
   std::unique_ptr<drmgr_t> drmgr_;
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level);
 
   // | ---------------------------- subscribers ----------------------------- |
   message_filters::Subscriber<lidar_tracker::Tracks> sub_detection_;
   void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);
-  void callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, const lidar_tracker::TracksConstPtr& det_msg, CameraContext& cc);
+  void callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc);
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
 
   // | ----------------------------- publishers ----------------------------- |
