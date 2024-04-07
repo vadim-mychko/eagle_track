@@ -217,7 +217,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
 
   cc.got_camera_info = true;
   cc.model.fromCameraInfo(*msg);
-  NODELET_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
+  NODELET_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
