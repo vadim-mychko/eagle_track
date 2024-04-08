@@ -95,11 +95,15 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  // | -------------- convert the image encoding to grayscale --------------- |
-  const std::string encoding = "mono8";
+  // | ----------------- convert the image encoding to BGR ------------------ |
+  const std::string encoding = "bgr8";
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
-  cc.buffer.push_back({image, msg->header.stamp});  
+
+  // | -------------- convert the image encoding to grayscale --------------- |
+  cv::Mat grayscale;
+  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
+  cc.buffer.push_back({grayscale, msg->header.stamp});
 
   // | --------- an iterator for tracking points through the buffer --------- |
   auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
