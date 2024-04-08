@@ -184,7 +184,7 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
   auto it = std::find_if(msg->tracks.cbegin(), msg->tracks.cend(), [](const lidar_tracker::Track& track) {
     return track.selected;
   });
-  const sensor_msgs::PointCloud2& points = it->points;
+  const auto& points = it->points;
 
   // | ------------- get the transformation to the camera frame ------------- |
   auto ret = transformer_->getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
