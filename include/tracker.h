@@ -44,7 +44,7 @@ struct CameraContext
   // | ---------------------------- subscribers ----------------------------- |
   ros::Subscriber sub_info;                    // for receiving camera parameters
   image_transport::SubscriberFilter sub_image; // for receiving images from the camera
-  ros::Subscriber sub_detection;              // for receiving incoming detections
+  ros::Subscriber sub_detection;               // for receiving incoming detections
 
   // | ----------------------------- publishers ----------------------------- |
   image_transport::Publisher pub_image;       // for publishing images + tracking result (points, bounding box, etc.)
@@ -61,7 +61,6 @@ struct CameraContext
   std::string name;                         // name of the camera context
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
   std::vector<cv::Point2f> prev_points;     // points calculated from previous optical flow
-  cv::Mat prev_image;                       // previous image for calculating optical flow
 
   CameraContext(const std::string& name);   // constructor with the name of the camera context
 };
