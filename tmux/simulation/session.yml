@@ -24,7 +24,7 @@ windows:
   - spawn:
       layout: tiled
       panes:
-        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-rangefinder --enable-ground-truth --enable-bluefox-camera --enable-bluefox-camera-front --enable-ouster model:=OS1-128 use_gpu:=true horizontal_samples:=1024 update_rate:=10"
+        - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "91 --eaglemk2 --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-rangefinder --enable-ground-truth --enable-bluefox-camera --enable-bluefox-camera-front --enable-ouster model:=OS1-128 use_gpu:=True horizontal_samples:=1024 update_rate:=10"
         - waitForGazebo; rosservice call /mrs_drone_spawner/spawn "2  --f550 --pos_file $TRACK_PATH/tmux/simulation/uav_spawn_positions.csv --enable-rangefinder --enable-ground-truth"
   - hw_api:
       layout: tiled
