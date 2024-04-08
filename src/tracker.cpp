@@ -39,7 +39,8 @@ void Tracker::onInit() {
   down_.sub_image.registerCallback(boost::bind(&Tracker::callbackImage, this, _1, std::ref(down_)));
   down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
 
-  sub_detection_.subscribe(nh, "detection", 1);
+  front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
+  down_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(down_)));
 
   // | ----------------------------- publishers ----------------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
@@ -49,7 +50,8 @@ void Tracker::onInit() {
   down_.pub_projections = it.advertise("projections_down", 1);
 
   // | -------------------------- synchronization --------------------------- |
-  
+  front_.buffer.resize(image_buffer_size);
+  down_.buffer.resize(image_buffer_size);
 
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
@@ -76,6 +78,16 @@ void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint3
                       | (config.getMinEigenvals ? cv::OPTFLOW_LK_GET_MIN_EIGENVALS : 0));
     flow_->setMinEigThreshold(config.minEigThreshold);
   }
+}
+
+void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
+  if (!initialized_ || cc.got_camera_info) {
+    return;
+  }
+
+  cc.got_camera_info = true;
+  cc.model.fromCameraInfo(*msg);
+  NODELET_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
 }
 
 void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
@@ -133,26 +145,21 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   }
 }
 
-void Tracker::callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, const lidar_tracker::TracksConstPtr& det_msg, CameraContext& cc) {
-  if (!initialized_) {
-    return;
-  }
-
-  if (!cc.got_camera_info) {
-    callbackImage(img_msg, cc);
+void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
+  if (!initialized_ || !cc.got_camera_info) {
     return;
   }
 
   // | -------------------------- get the pointcloud ------------------------ |
-  auto it = std::find_if(det_msg->tracks.cbegin(), det_msg->tracks.cend(), [](const lidar_tracker::Track& track) {
+  auto it = std::find_if(msg->tracks.cbegin(), msg->tracks.cend(), [](const lidar_tracker::Track& track) {
     return track.selected;
   });
-  const sensor_msgs::PointCloud2 points = it->points;
+  const sensor_msgs::PointCloud2& points = it->points;
 
   // | ------------- get the transformation to the camera frame ------------- |
   auto ret = transformer_->getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
-    NODELET_WARN_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
+    NODELET_WARN_STREAM("[" << cc.name << "]: Failed to transform the pointcloud to the camera frame");
     return;
   }
 
@@ -166,6 +173,7 @@ void Tracker::callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, 
   double cam_width = cc.model.fullResolution().width;
   double cam_height = cc.model.fullResolution().height;
 
+  // | ------------- project the poincloud onto the camera plane ------------ |
   std::vector<cv::Point2f> projections;
   projections.reserve(cloud.points.size());
   for (const auto& point : cloud.points) {
@@ -186,46 +194,11 @@ void Tracker::callbackImageDetection(const sensor_msgs::ImageConstPtr& img_msg, 
     }
   }
 
-  const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(img_msg, encoding);
-  cv::Mat image = bridge_image_ptr->image;
-
-  cv::Mat grayscale;
-  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
-
-  cc.prev_image = grayscale;
-  cc.prev_points = std::move(projections);
-
-  // | ---------------------------- visualization --------------------------- |
-  cv::Mat track_image = image.clone();
-  for (const auto& point : cc.prev_points) {
-    cv::circle(track_image, point, 3, cv::Scalar(0, 0, 255), -1);
-  }
-
-  publishImage(track_image, img_msg->header, encoding, cc.pub_image);
-  publishImage(track_image, img_msg->header, encoding, cc.pub_projections);
-}
-
-void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
-  if (!initialized_ || cc.got_camera_info) {
-    return;
-  }
-
-  cc.got_camera_info = true;
-  cc.model.fromCameraInfo(*msg);
-  NODELET_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
-}
-
-void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
-  // Prepare a cv_bridge image to be converted to the ROS message
-  cv_bridge::CvImage bridge_image_out;
-  bridge_image_out.image = image.getMat();
-  bridge_image_out.header = header;
-  bridge_image_out.encoding = encoding;
-
-  // Now convert the cv_bridge image to a ROS message and publish it
-  sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
-  pub.publish(out_msg);
+  // | ---------------------- update the camera context --------------------- |
+  std::lock_guard lock(cc.sync_mutex);
+  cc.should_init = true;
+  cc.detection_points = std::move(projections);
+  cc.detection_stamp = points.header.stamp;
 }
 
 } // namespace eagle_track

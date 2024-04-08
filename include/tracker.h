@@ -42,8 +42,9 @@ struct CameraContext
   bool got_camera_info = false; // whether received camera parameters already
 
   // | ---------------------------- subscribers ----------------------------- |
-  image_transport::SubscriberFilter sub_image; // for receiving images from the camera
   ros::Subscriber sub_info;                    // for receiving camera parameters
+  image_transport::SubscriberFilter sub_image; // for receiving images from the camera
+  ros::Subscriber sub_detection;              // for receiving incoming detections
 
   // | ----------------------------- publishers ----------------------------- |
   image_transport::Publisher pub_image;       // for publishing images + tracking result (points, bounding box, etc.)
@@ -84,10 +85,9 @@ private:
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback
 
   // | ---------------------------- subscribers ----------------------------- |
-  ros::Subscriber sub_detection_;                                                         // for receiving incoming detections
+  void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc); // callback for the camera info
   void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);           // callback for the images from the cameras
   void callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc);    // callback for the detections
-  void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc); // callback for the camera info
 
   // | ----------------------------- publishers ----------------------------- |
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
