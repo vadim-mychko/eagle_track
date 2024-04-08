@@ -50,8 +50,8 @@ void Tracker::onInit() {
   down_.pub_projections = it.advertise("projections_down", 1);
 
   // | -------------------------- synchronization --------------------------- |
-  front_.buffer.resize(image_buffer_size);
-  down_.buffer.resize(image_buffer_size);
+  front_.buffer.set_capacity(image_buffer_size);
+  down_.buffer.set_capacity(image_buffer_size);
 
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
@@ -95,44 +95,70 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  const std::string encoding = "bgr8";
+  // | -------------- convert the image encoding to grayscale --------------- |
+  const std::string encoding = "mono8";
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
+  cc.buffer.push_back({image, msg->header.stamp});  
 
-  cv::Mat grayscale;
-  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
+  // | --------- an iterator for tracking points through the buffer --------- |
+  auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
 
-  if (cc.prev_image.empty()) {
-    cc.prev_image = grayscale;
-    return;
-  }
-
+  // | ----------------- get the detection points if needed ----------------- |
+  bool got_detection = false;
   if (_manual_detect_ && cc.prev_points.empty()) {
-    cc.prev_points = selectPoints("manual_detect", cc.prev_image);
-  }
-
-  if (cc.prev_points.empty()) {
-    publishImage(image, msg->header, encoding, cc.pub_image);
-    return;
-  }
-
-  // | --------------- perform optical flow for the two images -------------- |
-  std::vector<cv::Point2f> next_points;
-  std::vector<uchar> status;
-  flow_->calc(cc.prev_image, grayscale, cc.prev_points, next_points, status);
-
-  // | --------- filter points by their status after the optical flow ------- |
-  std::vector<cv::Point2f> filtered_points;
-  for (std::size_t i = 0; i < next_points.size(); ++i) {
-    if (status[i] == 1) {
-      filtered_points.push_back(next_points[i]);
+    got_detection = true;
+    cc.prev_points = selectPoints("manual_detect", image);
+  } else if (cc.should_init && !cc.detection_points.empty()) {
+    got_detection = true;
+    // | ------- obtain the latest detection in a thread-safe manner -------- |
+    ros::Time stamp;
+    {
+      std::lock_guard lock(cc.sync_mutex);
+      cc.should_init = false;
+      cc.prev_points = std::move(cc.detection_points);
+      stamp = cc.detection_stamp;
     }
+
+    // | ---------- find the closest image in terms of timestamps ----------- |
+    double target = stamp.toSec();
+    from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+      [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+        return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+    });
   }
 
-  cc.prev_points = std::move(filtered_points);
-  cc.prev_image = grayscale;
+  // | ---------------------- projections visualization --------------------- |
+  if (got_detection) {
+    cv::Mat projection_image = image.clone();
+    for (const auto& point : cc.prev_points) {
+      cv::circle(projection_image, point, 3, cv::Scalar(0, 0, 255), -1);
+    }
+    publishImage(projection_image, msg->header, encoding, cc.pub_projections);
+  }
 
-  // | ---------------------------- visualization --------------------------- |
+  // | -------- perform tracking for all images left in the buffer ---------- |
+  for (auto it = from; it < cc.buffer.end() - 1 && !cc.prev_points.empty(); ++it) {
+    auto prev = it;
+    auto curr = it + 1;
+
+    // | -------------- perform optical flow for the two images ------------- |
+    std::vector<cv::Point2f> next_points;
+    std::vector<uchar> status;
+    flow_->calc(prev->image, curr->image, cc.prev_points, next_points, status);
+
+    // | ------- filter points by their status after the optical flow ------- |
+    std::vector<cv::Point2f> filtered_points;
+    for (std::size_t i = 0; i < next_points.size(); ++i) {
+      if (status[i] == 1) {
+        filtered_points.push_back(next_points[i]);
+      }
+    }
+
+    cc.prev_points = std::move(filtered_points);
+  }
+
+  // | ----------------------- tracking visualization ----------------------- |
   if (cc.prev_points.empty()) {
     publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
