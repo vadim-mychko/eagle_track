@@ -176,7 +176,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
-  if (!initialized_ || !cc.got_camera_info) {
+  if (!initialized_ || !cc.got_camera_info || msg->tracks.size() == 0) {
     return;
   }
 
