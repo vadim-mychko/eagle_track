@@ -95,15 +95,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  // | ----------------- convert the image encoding to BGR ------------------ |
-  const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
-  cv::Mat image = bridge_image_ptr->image;
-
   // | -------------- convert the image encoding to grayscale --------------- |
-  cv::Mat grayscale;
-  cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
-  cc.buffer.push_back({grayscale, msg->header.stamp});
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, "mono8");
+  cv::Mat image = bridge_image_ptr->image;
+  cc.buffer.push_back({image, msg->header.stamp});
 
   // | --------- an iterator for tracking points through the buffer --------- |
   auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
@@ -134,11 +129,12 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   // | ---------------------- projections visualization --------------------- |
   if (got_detection && !cc.prev_points.empty()) {
-    cv::Mat projection_image = from->image.clone();
+    cv::Mat projection_image;
+    cv::cvtColor(from->image, projection_image, cv::COLOR_GRAY2BGR);
     for (const auto& point : cc.prev_points) {
       cv::circle(projection_image, point, 3, cv::Scalar(0, 0, 255), -1);
     }
-    publishImage(projection_image, msg->header, encoding, cc.pub_projections);
+    publishImage(projection_image, msg->header, "bgr8", cc.pub_projections);
   }
 
   // | -------- perform tracking for all images left in the buffer ---------- |
@@ -164,19 +160,20 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   // | ----------------------- tracking visualization ----------------------- |
   if (cc.prev_points.empty()) {
-    publishImage(image, msg->header, encoding, cc.pub_image);
+    publishImage(image, msg->header, "mono8", cc.pub_image);
   } else {
-    cv::Mat track_image = image.clone();
+    cv::Mat track_image;
+    cv::cvtColor(image, track_image, cv::COLOR_GRAY2BGR);
     for (const auto& point : cc.prev_points) {
       cv::circle(track_image, point, 3, cv::Scalar(255, 0, 0), -1);
     }
 
-    publishImage(track_image, msg->header, encoding, cc.pub_image);
+    publishImage(track_image, msg->header, "bgr8", cc.pub_image);
   }
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
-  if (!initialized_ || !cc.got_camera_info || msg->tracks.size() == 0) {
+  if (!initialized_ || !cc.got_camera_info || msg->tracks.empty()) {
     return;
   }
 
