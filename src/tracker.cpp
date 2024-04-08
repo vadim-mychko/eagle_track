@@ -133,7 +133,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   }
 
   // | ---------------------- projections visualization --------------------- |
-  if (got_detection) {
+  if (got_detection && !cc.prev_points.empty()) {
     cv::Mat projection_image = image.clone();
     for (const auto& point : cc.prev_points) {
       cv::circle(projection_image, point, 3, cv::Scalar(0, 0, 255), -1);
