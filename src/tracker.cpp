@@ -201,6 +201,18 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
   cc.detection_stamp = points.header.stamp;
 }
 
+void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
+  // Prepare a cv_bridge image to be converted to the ROS message
+  cv_bridge::CvImage bridge_image_out;
+  bridge_image_out.image = image.getMat();
+  bridge_image_out.header = header;
+  bridge_image_out.encoding = encoding;
+
+  // Now convert the cv_bridge image to a ROS message and publish it
+  sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
+  pub.publish(out_msg);
+}
+
 } // namespace eagle_track
 
 // every nodelet must include macros which export the class as a nodelet plugin
