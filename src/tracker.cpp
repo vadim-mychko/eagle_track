@@ -188,8 +188,8 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
   // | ------------- transform the pointcloud to the camera frame ----------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
 
-  double cam_width = cc.model.fullResolution().width;
-  double cam_height = cc.model.fullResolution().height;
+  const double cam_width = cc.model.fullResolution().width;
+  const double cam_height = cc.model.fullResolution().height;
 
   // | ------------- project the poincloud onto the camera plane ------------ |
   std::vector<cv::Point2d> projections;
