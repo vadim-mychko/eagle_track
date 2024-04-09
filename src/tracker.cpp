@@ -49,9 +49,10 @@ void Tracker::onInit() {
   down_.pub_image = it.advertise("tracker_down", 1);
   down_.pub_projections = it.advertise("projections_down", 1);
 
-  // | -------------------------- synchronization --------------------------- |
+  // | -------------------------- camera contexts --------------------------- |
   front_.buffer.set_capacity(image_buffer_size);
   down_.buffer.set_capacity(image_buffer_size);
+  
 
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
@@ -70,13 +71,9 @@ void Tracker::onInit() {
 
 void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level) {
   if (level == 1) {
-    flow_->setWinSize({config.winSizeWidth, config.winSizeHeight});
-    flow_->setMaxLevel(config.maxLevel);
-    cv::TermCriteria criteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, config.maxCount, config.epsilon);
-    flow_->setTermCriteria(criteria);
-    flow_->setFlags((config.useInitialFlow ? cv::OPTFLOW_USE_INITIAL_FLOW : 0)
-                      | (config.getMinEigenvals ? cv::OPTFLOW_LK_GET_MIN_EIGENVALS : 0));
-    flow_->setMinEigThreshold(config.minEigThreshold);
+    tracker_type_ = config.tracker_type;
+    front_.tracker = choose_tracker(tracker_type_);
+    down_.tracker = choose_tracker(tracker_type_);
   }
 }
 
@@ -95,19 +92,23 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     return;
   }
 
-  // | -------------- convert the image encoding to grayscale --------------- |
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, "mono8");
+  // | -------------------- convert the image to BGR ------------------------ |
+  const std::string encoding = "bgr8";
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
   cc.buffer.push_back({image, msg->header.stamp});
 
-  // | --------- an iterator for tracking points through the buffer --------- |
+  // | ---------------- prepare for processing the detection ---------------- |
+  cv::Rect2d bbox;
+  bool success = cc.tracker->update(image, bbox);
+  bool got_detection = false;
+  std::vector<cv::Point2d> points;
   auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
 
   // | ----------------- get the detection points if needed ----------------- |
-  bool got_detection = false;
-  if (_manual_detect_ && cc.prev_points.empty()) {
+  if (_manual_detect_ && !success) {
     got_detection = true;
-    cc.prev_points = selectPoints("manual_detect", image);
+    points = selectPoints("manual_detect", image);
   } else if (cc.should_init && !cc.detection_points.empty()) {
     got_detection = true;
     // | ------- obtain the latest detection in a thread-safe manner -------- |
@@ -115,7 +116,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     {
       std::lock_guard lock(cc.sync_mutex);
       cc.should_init = false;
-      cc.prev_points = std::move(cc.detection_points);
+      points = std::move(cc.detection_points);
       stamp = cc.detection_stamp;
     }
 
@@ -127,48 +128,43 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     });
   }
 
-  // | ---------------------- projections visualization --------------------- |
-  if (got_detection && !cc.prev_points.empty()) {
-    cv::Mat projection_image;
-    cv::cvtColor(from->image, projection_image, cv::COLOR_GRAY2BGR);
-    for (const auto& point : cc.prev_points) {
+  if (got_detection && !points.empty()) {
+    // | --------------------- projections visualization -------------------- |
+    cv::Mat projection_image = image.clone();
+    for (const auto& point : points) {
       cv::circle(projection_image, point, 3, cv::Scalar(0, 0, 255), -1);
     }
-    publishImage(projection_image, msg->header, "bgr8", cc.pub_projections);
+    publishImage(projection_image, msg->header, encoding, cc.pub_projections);
+
+    // | ---------- transform the detection into the bounding box ----------- |
+    double min_x = cc.model.fullResolution().width;
+    double min_y = cc.model.fullResolution().height;
+    double max_x = 0.0;
+    double max_y = 0.0;
+    for (const auto& point : points) {
+      min_x = std::min(min_x, point.x);
+      min_y = std::min(min_y, point.y);
+      max_x = std::max(max_x, point.x);
+      max_y = std::max(max_y, point.y);
+    }
+
+    bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+    cc.tracker = choose_tracker(tracker_type_);
+    success = cc.tracker->init(from->image, bbox);
   }
 
   // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from; it < cc.buffer.end() - 1 && !cc.prev_points.empty(); ++it) {
-    auto prev = it;
-    auto curr = it + 1;
-
-    // | -------------- perform optical flow for the two images ------------- |
-    std::vector<cv::Point2f> next_points;
-    std::vector<uchar> status;
-    flow_->calc(prev->image, curr->image, cc.prev_points, next_points, status);
-
-    // | ------- filter points by their status after the optical flow ------- |
-    std::vector<cv::Point2f> filtered_points;
-    for (std::size_t i = 0; i < next_points.size(); ++i) {
-      if (status[i] == 1) {
-        filtered_points.push_back(next_points[i]);
-      }
-    }
-
-    cc.prev_points = std::move(filtered_points);
+  for (auto it = from + 1; it < cc.buffer.end() && success; ++it) {
+    success = cc.tracker->update(it->image, bbox);
   }
 
   // | ----------------------- tracking visualization ----------------------- |
-  if (cc.prev_points.empty()) {
-    publishImage(image, msg->header, "mono8", cc.pub_image);
+  if (!success) {
+    publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
-    cv::Mat track_image;
-    cv::cvtColor(image, track_image, cv::COLOR_GRAY2BGR);
-    for (const auto& point : cc.prev_points) {
-      cv::circle(track_image, point, 3, cv::Scalar(255, 0, 0), -1);
-    }
-
-    publishImage(track_image, msg->header, "bgr8", cc.pub_image);
+    cv::Mat track_image = image.clone();
+    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), -1);
+    publishImage(track_image, msg->header, encoding, cc.pub_image);
   }
 }
 
@@ -201,7 +197,7 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
   double cam_height = cc.model.fullResolution().height;
 
   // | ------------- project the poincloud onto the camera plane ------------ |
-  std::vector<cv::Point2f> projections;
+  std::vector<cv::Point2d> projections;
   projections.reserve(cloud.points.size());
   for (const auto& point : cloud.points) {
     if (point.z < 0) {
@@ -238,6 +234,26 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   // Now convert the cv_bridge image to a ROS message and publish it
   sensor_msgs::ImageConstPtr out_msg = bridge_image_out.toImageMsg();
   pub.publish(out_msg);
+}
+
+cv::Ptr<cv::Tracker> Tracker::choose_tracker(const std::string& tracker_type) {
+  if (tracker_type == "Boosting") {
+    return cv::TrackerBoosting::create();
+  } else if (tracker_type == "MIL") {
+    return cv::TrackerMIL::create();
+  } else if (tracker_type == "KCF") {
+    return cv::TrackerKCF::create();
+  } else if (tracker_type == "TLD") {
+    return cv::TrackerTLD::create();
+  } else if (tracker_type == "MedianFlow") {
+    return cv::TrackerMedianFlow::create();
+  } else if (tracker_type == "GOTURN") {
+    return cv::TrackerGOTURN::create();
+  } else if (tracker_type == "MOSSE") {
+    return cv::TrackerMOSSE::create();
+  } else if (tracker_type == "CSRT") {
+    return cv::TrackerCSRT::create();
+  }
 }
 
 } // namespace eagle_track

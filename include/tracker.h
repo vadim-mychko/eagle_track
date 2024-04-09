@@ -8,7 +8,7 @@
 #include <nodelet/nodelet.h>
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/tracking.hpp>
+#include <opencv2/tracking/tracker.hpp>
 #include <cv_bridge/cv_bridge.h>
 
 #include <image_transport/image_transport.h>
@@ -52,7 +52,7 @@ struct CameraContext
 
   // | -------------------------- synchronization --------------------------- |
   bool should_init = false;                      // whether should re-initialize the tracker in the image callback
-  std::vector<cv::Point2f> detection_points;     // points from the latest detection
+  std::vector<cv::Point2d> detection_points;     // points from the latest detection
   ros::Time detection_stamp;                     // timestamp of the latest detection
   std::mutex sync_mutex;                         // mutex for synchronization between callbacks
   boost::circular_buffer<CvImageStamped> buffer; // buffer for storing the latest images from the image callback
@@ -60,7 +60,7 @@ struct CameraContext
   // | ------------------------- context essentials ------------------------- |
   std::string name;                         // name of the camera context
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
-  std::vector<cv::Point2f> prev_points;     // points calculated from previous optical flow
+  cv::Ptr<cv::Tracker> tracker;             // tracker used to predict the next bounding box
 
   CameraContext(const std::string& name);   // constructor with the name of the camera context
 };
@@ -79,8 +79,8 @@ private:
   double _throttle_period_; // parameter regulating frequency of log messages
 
   // | -------------------------- dynamic parameters ------------------------ |
-  using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;    // short name for the dynamic config
-  std::unique_ptr<drmgr_t> drmgr_;                                                   // dynamic config manager
+  using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;                       // short name for the dynamic config
+  std::unique_ptr<drmgr_t> drmgr_;                                                                      // dynamic config manager
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback
 
   // | ---------------------------- subscribers ----------------------------- |
@@ -92,9 +92,11 @@ private:
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
 
   // | ------------------------- tracker essentials ------------------------- |
-  CameraContext front_ = CameraContext("FrontCamera");                              // camera context for the front camera
-  CameraContext down_ = CameraContext("DownCamera");                                // camera context for the down camera
-  cv::Ptr<cv::SparsePyrLKOpticalFlow> flow_ = cv::SparsePyrLKOpticalFlow::create(); // parametrized Lucas-Kanade tracker
+  CameraContext front_ = CameraContext("FrontCamera"); // camera context for the front camera
+  CameraContext down_ = CameraContext("DownCamera");   // camera context for the down camera
+  std::string tracker_type_;                           // type of the tracker to use (chosen by the dynamic config)
+
+  cv::Ptr<cv::Tracker> choose_tracker(const std::string& tracker_type);
 
   // | ------------------------ coordinate transforms ----------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_; // for transforming coordinates between sensors
