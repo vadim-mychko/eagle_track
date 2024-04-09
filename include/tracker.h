@@ -40,7 +40,7 @@ struct CameraContext
 {
   // | -------------------------------- flags ------------------------------- |
   bool got_camera_info = false; // whether received camera parameters already
-  bool created_tracker = false; // whether assigned tracker from a dynamic config already
+  bool success = false;         // whether successfully tracked previously
 
   // | ---------------------------- subscribers ----------------------------- |
   ros::Subscriber sub_info;                    // for receiving camera parameters

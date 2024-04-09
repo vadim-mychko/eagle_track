@@ -69,11 +69,6 @@ void Tracker::onInit() {
 
 void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {
   tracker_type_ = config.tracker_type;
-  front_.tracker = choose_tracker(tracker_type_);
-  front_.created_tracker = true;
-
-  down_.tracker = choose_tracker(tracker_type_);    
-  down_.created_tracker = true;
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
@@ -97,23 +92,17 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv::Mat image = bridge_image_ptr->image;
   cc.buffer.push_back({image, msg->header.stamp});
 
-  if (!cc.created_tracker) {
-    return;
-  }
-
   // | ---------------- prepare for processing the detection ---------------- |
-  cv::Rect2d bbox;
-  bool success = cc.tracker->update(image, bbox);
   bool got_detection = false;
   std::vector<cv::Point2d> points;
   auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
 
   // | ----------------- get the detection points if needed ----------------- |
-  if (_manual_detect_ && !success) {
+  if (_manual_detect_ && !cc.success) {
     got_detection = true;
     points = selectPoints("manual_detect", image);
     from = cc.buffer.end() - 1;
-    success = true;
+    cc.success = true;
   } else if (cc.should_init && !cc.detection_points.empty()) {
     got_detection = true;
     // | ------- obtain the latest detection in a thread-safe manner -------- |
@@ -133,6 +122,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     });
   }
 
+  cv::Rect2d bbox;
   if (got_detection && !points.empty()) {
     // | --------------------- projections visualization -------------------- |
     cv::Mat projection_image = from->image.clone();
@@ -155,16 +145,16 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
     bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
     cc.tracker = choose_tracker(tracker_type_);
-    success = cc.tracker->init(from->image, bbox);
+    cc.success = cc.tracker->init(from->image, bbox);
   }
 
   // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from + 1; it < cc.buffer.end() && success; ++it) {
-    success = cc.tracker->update(it->image, bbox);
+  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
+    cc.success = cc.tracker->update(it->image, bbox);
   }
 
   // | ----------------------- tracking visualization ----------------------- |
-  if (!success) {
+  if (!cc.success) {
     publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
