@@ -254,6 +254,8 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const std::string& tracker_type) {
   } else if (tracker_type == "CSRT") {
     return cv::TrackerCSRT::create();
   }
+
+  return nullptr;
 }
 
 } // namespace eagle_track
