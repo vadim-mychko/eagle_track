@@ -21,7 +21,6 @@ void Tracker::onInit() {
 
   // | -------------------------- dynamic parameters ------------------------ |
   drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", boost::bind(&Tracker::callbackConfig, this, _1, _2));
-
   if (!pl.loadedSuccessfully() || !drmgr_->loaded_successfully()) {
     NODELET_ERROR_ONCE("[Tracker]: Failed to load non-optional parameters!");
     ros::shutdown();
@@ -68,15 +67,13 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
-void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level) {
-  if (level == 1) {
-    tracker_type_ = config.tracker_type;
-    front_.tracker = choose_tracker(tracker_type_);
-    front_.created_tracker = true;
+void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {
+  tracker_type_ = config.tracker_type;
+  front_.tracker = choose_tracker(tracker_type_);
+  front_.created_tracker = true;
 
-    down_.tracker = choose_tracker(tracker_type_);    
-    down_.created_tracker = true;
-  }
+  down_.tracker = choose_tracker(tracker_type_);    
+  down_.created_tracker = true;
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
