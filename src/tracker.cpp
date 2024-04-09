@@ -158,7 +158,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, bbox, {255, 0, 0}, -1);
+    cv::rectangle(track_image, bbox, {255, 0, 0}, 3);
     publishImage(track_image, msg->header, encoding, cc.pub_image);
   }
 }
