@@ -49,10 +49,9 @@ void Tracker::onInit() {
   down_.pub_image = it.advertise("tracker_down", 1);
   down_.pub_projections = it.advertise("projections_down", 1);
 
-  // | -------------------------- camera contexts --------------------------- |
+  // | -------------------------- synchronization --------------------------- |
   front_.buffer.set_capacity(image_buffer_size);
   down_.buffer.set_capacity(image_buffer_size);
-  
 
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
@@ -73,7 +72,10 @@ void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, uint3
   if (level == 1) {
     tracker_type_ = config.tracker_type;
     front_.tracker = choose_tracker(tracker_type_);
-    down_.tracker = choose_tracker(tracker_type_);
+    front_.created_tracker = true;
+
+    down_.tracker = choose_tracker(tracker_type_);    
+    down_.created_tracker = true;
   }
 }
 
@@ -98,6 +100,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   cv::Mat image = bridge_image_ptr->image;
   cc.buffer.push_back({image, msg->header.stamp});
 
+  if (!cc.created_tracker) {
+    return;
+  }
+
   // | ---------------- prepare for processing the detection ---------------- |
   cv::Rect2d bbox;
   bool success = cc.tracker->update(image, bbox);
@@ -109,6 +115,8 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   if (_manual_detect_ && !success) {
     got_detection = true;
     points = selectPoints("manual_detect", image);
+    from = cc.buffer.end() - 1;
+    success = true;
   } else if (cc.should_init && !cc.detection_points.empty()) {
     got_detection = true;
     // | ------- obtain the latest detection in a thread-safe manner -------- |
@@ -130,9 +138,9 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   if (got_detection && !points.empty()) {
     // | --------------------- projections visualization -------------------- |
-    cv::Mat projection_image = image.clone();
+    cv::Mat projection_image = from->image.clone();
     for (const auto& point : points) {
-      cv::circle(projection_image, point, 3, cv::Scalar(0, 0, 255), -1);
+      cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
     }
     publishImage(projection_image, msg->header, encoding, cc.pub_projections);
 
@@ -163,7 +171,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     publishImage(image, msg->header, encoding, cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, bbox, cv::Scalar(255, 0, 0), -1);
+    cv::rectangle(track_image, bbox, {255, 0, 0}, -1);
     publishImage(track_image, msg->header, encoding, cc.pub_image);
   }
 }

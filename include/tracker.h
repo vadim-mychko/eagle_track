@@ -40,6 +40,7 @@ struct CameraContext
 {
   // | -------------------------------- flags ------------------------------- |
   bool got_camera_info = false; // whether received camera parameters already
+  bool created_tracker = false; // whether assigned tracker from a dynamic config already
 
   // | ---------------------------- subscribers ----------------------------- |
   ros::Subscriber sub_info;                    // for receiving camera parameters
@@ -79,8 +80,8 @@ private:
   double _throttle_period_; // parameter regulating frequency of log messages
 
   // | -------------------------- dynamic parameters ------------------------ |
-  using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;                       // short name for the dynamic config
-  std::unique_ptr<drmgr_t> drmgr_;                                                                      // dynamic config manager
+  using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;    // short name for the dynamic config
+  std::unique_ptr<drmgr_t> drmgr_;                                                   // dynamic config manager
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback
 
   // | ---------------------------- subscribers ----------------------------- |
