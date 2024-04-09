@@ -95,9 +95,9 @@ private:
   // | ------------------------- tracker essentials ------------------------- |
   CameraContext front_ = CameraContext("FrontCamera"); // camera context for the front camera
   CameraContext down_ = CameraContext("DownCamera");   // camera context for the down camera
-  std::string tracker_type_;                           // type of the tracker to use (chosen by the dynamic config)
+  int tracker_type_;                                   // type of the tracker to use (chosen by the dynamic config)
 
-  cv::Ptr<cv::Tracker> choose_tracker(const std::string& tracker_type);
+  cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
 
   // | ------------------------ coordinate transforms ----------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_; // for transforming coordinates between sensors

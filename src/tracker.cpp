@@ -231,23 +231,16 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   pub.publish(out_msg);
 }
 
-cv::Ptr<cv::Tracker> Tracker::choose_tracker(const std::string& tracker_type) {
-  if (tracker_type == "Boosting") {
-    return cv::TrackerBoosting::create();
-  } else if (tracker_type == "MIL") {
-    return cv::TrackerMIL::create();
-  } else if (tracker_type == "KCF") {
-    return cv::TrackerKCF::create();
-  } else if (tracker_type == "TLD") {
-    return cv::TrackerTLD::create();
-  } else if (tracker_type == "MedianFlow") {
-    return cv::TrackerMedianFlow::create();
-  } else if (tracker_type == "GOTURN") {
-    return cv::TrackerGOTURN::create();
-  } else if (tracker_type == "MOSSE") {
-    return cv::TrackerMOSSE::create();
-  } else if (tracker_type == "CSRT") {
-    return cv::TrackerCSRT::create();
+cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
+  switch (tracker_type) {
+    case eagle_track::TrackParams_Boosting: return cv::TrackerBoosting::create();
+    case eagle_track::TrackParams_MIL: return cv::TrackerMIL::create();
+    case eagle_track::TrackParams_KCF: return cv::TrackerKCF::create();
+    case eagle_track::TrackParams_TLD: return cv::TrackerTLD::create();
+    case eagle_track::TrackParams_MedianFlow: return cv::TrackerMedianFlow::create();
+    case eagle_track::TrackParams_GOTURN: return cv::TrackerGOTURN::create();
+    case eagle_track::TrackParams_MOSSE: return cv::TrackerMOSSE::create();
+    case eagle_track::TrackParams_CSRT: return cv::TrackerCSRT::create();
   }
 
   return nullptr;
