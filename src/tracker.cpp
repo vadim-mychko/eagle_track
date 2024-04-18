@@ -202,7 +202,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
     point_cam.header.stamp = img_msg->header.stamp;
     point_cam.pose.position.x = ray.x;
     point_cam.pose.position.y = ray.y;
-    point_cam.pose.position.z = depth.at<uint16_t>({point.x, point.y});
+    point_cam.pose.position.z = depth.at<uint16_t>({static_cast<int>(point.x + 0.5), static_cast<int>(point.y + 0.5)});
 
     // perform the transformation between the coordinate systems of the cameras
     auto ret = transformer_->transformSingle(point_cam, rhs.model.tfFrame());
