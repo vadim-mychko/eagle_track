@@ -104,9 +104,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   // | ----------------- get the detection points if needed ----------------- |
   bool got_detection = false;
-  if (_manual_detect_ && cc.prev_points.empty()) {
+  if (_manual_detect_ && cc.prev_points.empty() && cc.name == "FrontCamera") {
     got_detection = true;
     cc.prev_points = selectPoints("manual_detect", image);
+    from = cc.buffer.end() - 1;
   } else if (cc.should_init && !cc.detection_points.empty()) {
     got_detection = true;
     // | ------- obtain the latest detection in a thread-safe manner -------- |
