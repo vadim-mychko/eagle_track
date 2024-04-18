@@ -189,11 +189,11 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
   cv::Mat depth = bridge_image_ptr->image;
 
   // | ------------- exchange the information to the second camera ---------- |
+  NODELET_INFO_STREAM("[" << self.name << "]: Preparing to exchange " << self.prev_points.size() << " points");
+  
   std::vector<cv::Point2f> other_points;
-  other_points.reserve(self.prev_points.size());
-  for (size_t i = 0; i < self.prev_points.size(); ++i) {
+  for (const auto& point : self.prev_points) {
     // get the point from one camera and project the pixel into the 3D ray
-    const auto& point = self.prev_points[i];
     auto ray = self.model.projectPixelTo3dRay(point);
 
     // prepare the point to be transformed into the other's camera coordinate system
@@ -215,10 +215,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
     // backproject the transformed 3D ray onto the other's camera image plane
     const auto& pos = point_cam.pose.position;
     auto other_point = other.model.project3dToPixel({pos.x, pos.y, pos.z});
-    other_points[i] = other_point;
+    other_points.push_back(other_point);
   }
 
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Exchanged " << other_points.size() << " " << other_points);
+  NODELET_INFO_STREAM("[" << self.name << "]: Exchanged " << other_points.size() << " points");
 
   // move the acquired points to the other's camera strtucture in a thread-safe manner
   std::lock_guard lock(other.sync_mutex);
