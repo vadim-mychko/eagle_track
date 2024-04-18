@@ -230,10 +230,12 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Exchanged " << other_points.size() << " points");
 
   // move the acquired points to the other's camera strtucture in a thread-safe manner
-  std::lock_guard lock(other.sync_mutex);
-  other.should_init = true;
-  other.detection_points = std::move(other_points);
-  other.detection_stamp = img_msg->header.stamp;
+  if (!other_points.empty()) {
+    std::lock_guard lock(other.sync_mutex);
+    other.should_init = true;
+    other.detection_points = std::move(other_points);
+    other.detection_stamp = img_msg->header.stamp;
+  }
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
