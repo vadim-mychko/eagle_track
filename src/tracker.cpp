@@ -189,20 +189,21 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
   cv::Mat depth = bridge_image_ptr->image;
 
   // | ------------- exchange the information to the second camera ---------- |
-  std::vector<cv::Point2f> rhs_points;
-  rhs_points.reserve(self.prev_points.size());
+  std::vector<cv::Point2f> other_points;
+  other_points.reserve(self.prev_points.size());
   for (size_t i = 0; i < self.prev_points.size(); ++i) {
     // get the point from one camera and project the pixel into the 3D ray
     const auto& point = self.prev_points[i];
     auto ray = self.model.projectPixelTo3dRay(point);
 
     // prepare the point to be transformed into the other's camera coordinate system
+    constexpr double mm2m = 1e-3;
     geometry_msgs::PoseStamped point_cam;
     point_cam.header.frame_id = self.model.tfFrame();
     point_cam.header.stamp = img_msg->header.stamp;
     point_cam.pose.position.x = ray.x;
     point_cam.pose.position.y = ray.y;
-    point_cam.pose.position.z = depth.at<uint16_t>({static_cast<int>(point.x + 0.5), static_cast<int>(point.y + 0.5)});
+    point_cam.pose.position.z = depth.at<uint16_t>({std::round(point.x), std::round(point.y)}) * mm2m;
 
     // perform the transformation between the coordinate systems of the cameras
     auto ret = transformer_->transformSingle(point_cam, other.model.tfFrame());
@@ -213,14 +214,16 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
 
     // backproject the transformed 3D ray onto the other's camera image plane
     const auto& pos = point_cam.pose.position;
-    auto rhs_point = other.model.project3dToPixel({pos.x, pos.y, pos.z});
-    rhs_points[i] = rhs_point;
+    auto other_point = other.model.project3dToPixel({pos.x, pos.y, pos.z});
+    other_points[i] = other_point;
   }
+
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Exchanged " << other_points.size() << " " << other_points);
 
   // move the acquired points to the other's camera strtucture in a thread-safe manner
   std::lock_guard lock(other.sync_mutex);
   other.should_init = true;
-  other.detection_points = std::move(rhs_points);
+  other.detection_points = std::move(other_points);
   other.detection_stamp = img_msg->header.stamp;
 }
 
