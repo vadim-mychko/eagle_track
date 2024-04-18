@@ -185,7 +185,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
   callbackImage(img_msg, depth_msg, lhs);
 
   // | -------------- convert the depth message into the CV image ----------- |
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg, "mono16");
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg);
   cv::Mat depth = bridge_image_ptr->image;
 
   // | ------------- exchange the information to the second camera ---------- |
