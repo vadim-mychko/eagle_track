@@ -29,12 +29,12 @@
       <!-- Parameters loaded from launch file -->
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)" />
       <param name="manual_detect" type="boolean" value="$(arg manual_detect)" />
+      <param name="image_type" type="string" value="raw" />
 
       <!-- Parameters loaded from YAML config file -->
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <param name="image_type" type="string" value="raw" />
       <remap from="~camera_front" to="bluefox_front/image_raw" />
       <remap from="~camera_front_info" to="bluefox_front/camera_info" />
       <remap from="~camera_down" to="bluefox_down/image_raw" />
