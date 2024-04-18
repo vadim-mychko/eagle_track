@@ -17,6 +17,7 @@ void Tracker::onInit() {
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   const auto image_type = pl.loadParam2<std::string>("image_type");
   pl.loadParam("throttle_period", _throttle_period_);
+  pl.loadParam("manual_detect", _manual_detect_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   // | -------------------------- dynamic parameters ------------------------ |
