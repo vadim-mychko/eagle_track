@@ -198,7 +198,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
 
     // prepare the point to be transformed into the other's camera coordinate system
     geometry_msgs::PoseStamped point_cam;
-    point_cam.header.frame_id = img_msg->header.frame_id;
+    point_cam.header.frame_id = lhs.model.tfFrame();
     point_cam.header.stamp = img_msg->header.stamp;
     point_cam.pose.position.x = ray.x;
     point_cam.pose.position.y = ray.y;
