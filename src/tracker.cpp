@@ -176,13 +176,13 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   }
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& lhs, CameraContext& rhs) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other) {
   if (!initialized_) {
     return;
   }
 
   // | ------------------ perform the tracking on one camera ---------------- |
-  callbackImage(img_msg, depth_msg, lhs);
+  callbackImage(img_msg, depth_msg, self);
 
   // | -------------- convert the depth message into the CV image ----------- |
   cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg);
@@ -190,38 +190,38 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
 
   // | ------------- exchange the information to the second camera ---------- |
   std::vector<cv::Point2f> rhs_points;
-  rhs_points.reserve(lhs.prev_points.size());
-  for (size_t i = 0; i < lhs.prev_points.size(); ++i) {
+  rhs_points.reserve(self.prev_points.size());
+  for (size_t i = 0; i < self.prev_points.size(); ++i) {
     // get the point from one camera and project the pixel into the 3D ray
-    const auto& point = lhs.prev_points[i];
-    auto ray = lhs.model.projectPixelTo3dRay(point);
+    const auto& point = self.prev_points[i];
+    auto ray = self.model.projectPixelTo3dRay(point);
 
     // prepare the point to be transformed into the other's camera coordinate system
     geometry_msgs::PoseStamped point_cam;
-    point_cam.header.frame_id = lhs.model.tfFrame();
+    point_cam.header.frame_id = self.model.tfFrame();
     point_cam.header.stamp = img_msg->header.stamp;
     point_cam.pose.position.x = ray.x;
     point_cam.pose.position.y = ray.y;
     point_cam.pose.position.z = depth.at<uint16_t>({static_cast<int>(point.x + 0.5), static_cast<int>(point.y + 0.5)});
 
     // perform the transformation between the coordinate systems of the cameras
-    auto ret = transformer_->transformSingle(point_cam, rhs.model.tfFrame());
+    auto ret = transformer_->transformSingle(point_cam, other.model.tfFrame());
     if (!ret.has_value()) {
-      NODELET_WARN_STREAM("[]: Failed to transform from " << lhs.name << " to " << rhs.name);
+      NODELET_WARN_STREAM("[]: Failed to transform from " << self.name << " to " << other.name);
       continue;
     }
 
     // backproject the transformed 3D ray onto the other's camera image plane
     const auto& pos = point_cam.pose.position;
-    auto rhs_point = rhs.model.project3dToPixel({pos.x, pos.y, pos.z});
+    auto rhs_point = other.model.project3dToPixel({pos.x, pos.y, pos.z});
     rhs_points[i] = rhs_point;
   }
 
   // move the acquired points to the other's camera strtucture in a thread-safe manner
-  std::lock_guard lock(rhs.sync_mutex);
-  rhs.should_init = true;
-  rhs.detection_points = std::move(rhs_points);
-  rhs.detection_stamp = img_msg->header.stamp;
+  std::lock_guard lock(other.sync_mutex);
+  other.should_init = true;
+  other.detection_points = std::move(rhs_points);
+  other.detection_stamp = img_msg->header.stamp;
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
