@@ -37,8 +37,12 @@
       <!-- Subscribers -->
       <remap from="~camera_front/compressed" to="up_rgbd/color/image_raw/compressed" />
       <remap from="~camera_front_info" to="up_rgbd/color/camera_info" />
+      <remap from="~camera_front_depth" to="up_rgbd/aligned_depth_to_color/image_raw" />
+
       <remap from="~camera_down/compressed" to="down_rgbd/color/image_raw/compressed" />
       <remap from="~camera_down_info" to="down_rgbd/color/camera_info" />
+      <remap from="~camera_down_depth" to="down_rgbd/aligned_depth_to_color/image_raw" />
+
       <remap from="~detection" to="lidar_tracker/tracks" />
 
       <!-- Publishers -->
