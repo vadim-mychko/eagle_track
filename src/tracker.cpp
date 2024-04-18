@@ -189,7 +189,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
   cv::Mat depth = bridge_image_ptr->image;
 
   // | ------------- exchange the information to the second camera ---------- |
-  NODELET_INFO_STREAM("[" << self.name << "]: Preparing to exchange " << self.prev_points.size() << " points");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Preparing to exchange " << self.prev_points.size() << " points");
   
   std::vector<cv::Point2f> other_points;
   for (const auto& point : self.prev_points) {
@@ -203,7 +203,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
     point_cam.header.stamp = img_msg->header.stamp;
     point_cam.pose.position.x = ray.x;
     point_cam.pose.position.y = ray.y;
-    point_cam.pose.position.z = depth.at<uint16_t>({std::round(point.x), std::round(point.y)}) * mm2m;
+    point_cam.pose.position.z = depth.at<uint16_t>({(int)std::round(point.x), (int)std::round(point.y)}) * mm2m;
 
     // perform the transformation between the coordinate systems of the cameras
     auto ret = transformer_->transformSingle(point_cam, other.model.tfFrame());
@@ -218,7 +218,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
     other_points.push_back(other_point);
   }
 
-  NODELET_INFO_STREAM("[" << self.name << "]: Exchanged " << other_points.size() << " points");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Exchanged " << other_points.size() << " points");
 
   // move the acquired points to the other's camera strtucture in a thread-safe manner
   std::lock_guard lock(other.sync_mutex);
