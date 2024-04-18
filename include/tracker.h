@@ -17,7 +17,7 @@
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/sync_policies/exact_time.h>
 
 #include <mrs_lib/transformer.h>
 #include <mrs_lib/dynamic_reconfigure_mgr.h>
@@ -29,6 +29,9 @@
 
 namespace eagle_track
 {
+
+using policy_t = message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::Image>;
+using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
 
 struct CvImageStamped
 {
@@ -42,9 +45,11 @@ struct CameraContext
   bool got_camera_info = false; // whether received camera parameters already
 
   // | ---------------------------- subscribers ----------------------------- |
-  ros::Subscriber sub_info;                    // for receiving camera parameters
-  image_transport::SubscriberFilter sub_image; // for receiving images from the camera
-  ros::Subscriber sub_detection;               // for receiving incoming detections
+  std::unique_ptr<message_filters::Synchronizer<policy_t>> sync; // synchronizer for the image + depth
+  ros::Subscriber sub_info;                     // for receiving camera parameters
+  image_transport::SubscriberFilter sub_image;  // for receiving images from the camera
+  image_transport::SubscriberFilter sub_depth;  // for receiving depth from the camera
+  ros::Subscriber sub_detection;                // for receiving incoming detections
 
   // | ----------------------------- publishers ----------------------------- |
   image_transport::Publisher pub_image;       // for publishing images + tracking result (points, bounding box, etc.)
@@ -79,14 +84,14 @@ private:
   double _throttle_period_; // parameter regulating frequency of log messages
 
   // | -------------------------- dynamic parameters ------------------------ |
-  using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;    // short name for the dynamic config
   std::unique_ptr<drmgr_t> drmgr_;                                                   // dynamic config manager
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback
 
   // | ---------------------------- subscribers ----------------------------- |
-  void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc); // callback for the camera info
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);           // callback for the images from the cameras
-  void callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc);    // callback for the detections
+  void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
+  void callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc);
+  void callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& lhs, CameraContext& rhs);
+  void callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc);
 
   // | ----------------------------- publishers ----------------------------- |
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
