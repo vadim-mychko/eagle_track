@@ -35,7 +35,7 @@ void Tracker::onInit() {
   front_.sub_image.subscribe(it, "camera_front", 1, hints);
   front_.sub_depth.subscribe(it, "camera_front_depth", 1);
   front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), front_.sub_image, front_.sub_depth);
-  front_.sync->registerCallback(boost::bind(&Tracker::callbackImage, this, _1, _2, std::ref(front_), std::ref(down_)));
+  front_.sync->registerCallback(boost::bind(&Tracker::callbackExchange, this, _1, _2, std::ref(front_), std::ref(down_)));
   front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
 
   down_.sub_image.subscribe(it, "camera_down", 1, hints);
@@ -176,7 +176,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   }
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other) {
+void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other) {
   if (!initialized_) {
     return;
   }
