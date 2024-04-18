@@ -184,18 +184,40 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
   // | ------------------ perform the tracking on one camera ---------------- |
   callbackImage(img_msg, depth_msg, lhs);
 
+  // | -------------- convert the depth message into the CV image ----------- |
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg, "mono16");
+  cv::Mat depth = bridge_image_ptr->image;
+
   // | ------------- exchange the information to the second camera ---------- |
   std::vector<cv::Point2f> rhs_points;
   rhs_points.reserve(lhs.prev_points.size());
   for (size_t i = 0; i < lhs.prev_points.size(); ++i) {
+    // get the point from one camera and project the pixel into the 3D ray
     const auto& point = lhs.prev_points[i];
-    const auto& rect_point = lhs.model.rectifyPoint(point);
-    const auto& ray = lhs.model.projectPixelTo3dRay(rect_point);
-    const auto& rhs_point = rhs.model.project3dToPixel(ray);
-    const auto& unrect_rhs_point = rhs.model.unrectifyPoint(rhs_point);
-    rhs_points[i] = unrect_rhs_point;
+    auto ray = lhs.model.projectPixelTo3dRay(point);
+
+    // prepare the point to be transformed into the other's camera coordinate system
+    geometry_msgs::PoseStamped point_cam;
+    point_cam.header.frame_id = img_msg->header.frame_id;
+    point_cam.header.stamp = img_msg->header.stamp;
+    point_cam.pose.position.x = ray.x;
+    point_cam.pose.position.y = ray.y;
+    point_cam.pose.position.z = depth.at<uint16_t>({point.x, point.y});
+
+    // perform the transformation between the coordinate systems of the cameras
+    auto ret = transformer_->transformSingle(point_cam, rhs.model.tfFrame());
+    if (!ret.has_value()) {
+      NODELET_WARN_STREAM("[]: Failed to transform from " << lhs.name << " to " << rhs.name);
+      continue;
+    }
+
+    // backproject the transformed 3D ray onto the other's camera image plane
+    const auto& pos = point_cam.pose.position;
+    auto rhs_point = rhs.model.project3dToPixel({pos.x, pos.y, pos.z});
+    rhs_points[i] = rhs_point;
   }
 
+  // move the acquired points to the other's camera strtucture in a thread-safe manner
   std::lock_guard lock(rhs.sync_mutex);
   rhs.should_init = true;
   rhs.detection_points = std::move(rhs_points);
@@ -239,7 +261,7 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
     }
 
     // | ---------------- backproject the point from 3D to 2D --------------- |
-    cv::Point2d pt2d = cc.model.project3dToPixel(cv::Point3d(point.x, point.y, point.z));
+    cv::Point2d pt2d = cc.model.project3dToPixel({point.x, point.y, point.z});
     // | ---------------- unrectify the 2D point coordinates ---------------- |
     // This is done to correct for camera distortion. It has no effect in simulation, where the camera model
     // is an ideal pinhole camera, but usually has a BIG effect when using real cameras, so don't forget this part!
