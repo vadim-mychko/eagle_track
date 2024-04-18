@@ -190,8 +190,11 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
 
   // | ------------- exchange the information to the second camera ---------- |
   NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Preparing to exchange " << self.prev_points.size() << " points");
-  
+
   std::vector<cv::Point2f> other_points;
+  const double cam_width = other.model.fullResolution().width;
+  const double cam_height = other.model.fullResolution().height;
+
   for (const auto& point : self.prev_points) {
     // get the point from one camera and project the pixel into the 3D ray
     auto ray = self.model.projectPixelTo3dRay(point);
@@ -212,10 +215,16 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
       continue;
     }
 
-    // backproject the transformed 3D ray onto the other's camera image plane
     const auto& pos = point_cam.pose.position;
+    if (pos.z < 0) {
+      continue;
+    }
+  
+    // backproject the transformed 3D ray onto the other's camera image plane
     auto other_point = other.model.project3dToPixel({pos.x, pos.y, pos.z});
-    other_points.push_back(other_point);
+    if (other_point.x >= 0 && other_point.x < cam_width && other_point.y >= 0 && other_point.y < cam_height) {
+      other_points.push_back(other_point);
+    }
   }
 
   NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << self.name << "]: Exchanged " << other_points.size() << " points");
@@ -252,8 +261,8 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
   // | ------------- transform the pointcloud to the camera frame ----------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
 
-  double cam_width = cc.model.fullResolution().width;
-  double cam_height = cc.model.fullResolution().height;
+  const double cam_width = cc.model.fullResolution().width;
+  const double cam_height = cc.model.fullResolution().height;
 
   // | ------------- project the poincloud onto the camera plane ------------ |
   std::vector<cv::Point2f> projections;
