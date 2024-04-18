@@ -29,16 +29,16 @@
       <!-- Parameters loaded from launch file -->
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)" />
       <param name="manual_detect" type="boolean" value="$(arg manual_detect)" />
-      <param name="image_type" type="string" value="raw" />
+      <param name="image_type" type="string" value="compressed" />
 
       <!-- Parameters loaded from YAML config file -->
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <remap from="~camera_front" to="bluefox_front/image_raw" />
-      <remap from="~camera_front_info" to="bluefox_front/camera_info" />
-      <remap from="~camera_down" to="bluefox_down/image_raw" />
-      <remap from="~camera_down_info" to="bluefox_down/camera_info" />
+      <remap from="~camera_front" to="up_rgbd/color/image_raw" />
+      <remap from="~camera_front_info" to="up_rgbd/color/camera_info" />
+      <remap from="~camera_down" to="down_rgbd/color/image_raw" />
+      <remap from="~camera_down_info" to="down_rgbd/color/camera_info" />
       <remap from="~detection" to="lidar_tracker/tracks" />
 
       <!-- Publishers -->
