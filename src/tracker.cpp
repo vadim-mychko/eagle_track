@@ -57,6 +57,10 @@ void Tracker::onInit() {
   front_.buffer.set_capacity(image_buffer_size);
   down_.buffer.set_capacity(image_buffer_size);
 
+  // | ------------------------- context essentials ------------------------- |
+  front_.tracker = choose_tracker(tracker_type_);
+  down_.tracker = choose_tracker(tracker_type_);
+
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
   transformer_->setDefaultPrefix(uav_name);
@@ -215,7 +219,7 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
 
   const auto points = selectPoints("manual_detect", cc.buffer.back().image);
   if (points.empty()) {
-    return;
+    return false;
   }
 
   // | ---------------------- projections visualization --------------------- |
