@@ -125,6 +125,7 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   // | ------------- exchange the information to the second camera ---------- |
   std::lock_guard lock(other.exchange_mutex);
   other.got_exchange = true;
+  other.exchange_image = cv_bridge::toCvShare(img_msg, "bgr8")->image;
   other.exchange_bbox = self.bbox;
   other.exchange_stamp = img_msg->header.stamp;
 }
@@ -306,6 +307,34 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 bool Tracker::processExchange(CameraContext& cc) {
   if (!cc.got_exchange) {
     return false;
+  }
+
+  // | -------- obtain the latest exchange in a thread-safe manner ---------- |
+  cv::Mat image;
+  cv::Rect2d bbox;
+  ros::Time stamp;
+  {
+    std::lock_guard lock(cc.exchange_mutex);
+    image = cc.exchange_image;
+    bbox = cc.exchange_bbox;
+    stamp = cc.exchange_stamp;
+  }
+
+  // | ----------------------- initialize the tracker ----------------------- |
+  // initialization is done on the image and bounding box from the camera that exchanged information
+  cc.tracker = choose_tracker(tracker_type_);
+  cc.success = cc.tracker->init(image, bbox);
+
+  // | ----------- find the closest image in terms of timestamps ------------ |
+  const double target = stamp.toSec();
+  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+  });
+
+  // | -------- perform tracking for all images left in the buffer ---------- |
+  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
+    cc.success = cc.tracker->update(it->image, cc.bbox);
   }
 
   return true;

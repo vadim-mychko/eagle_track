@@ -65,6 +65,7 @@ struct CameraContext
   // | ---------------------- exchange between cameras ---------------------- |
   bool got_exchange = false; // whether got bounding box exchange
   std::mutex exchange_mutex; // mutex for synchronization between exchanges
+  cv::Mat exchange_image;    // image received from the latest exchange
   cv::Rect2d exchange_bbox;  // bounding box received from the latest exchange
   ros::Time exchange_stamp;  // timestamp of the latest exchange
 
