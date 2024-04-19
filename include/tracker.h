@@ -66,6 +66,7 @@ struct CameraContext
   bool got_exchange = false; // whether got bounding box exchange
   std::mutex exchange_mutex; // mutex for synchronization between exchanges
   cv::Rect2d exchange_bbox;  // bounding box received from the latest exchange
+  ros::Time exchange_stamp;  // timestamp of the latest exchange
 
   // | ------------------------- context essentials ------------------------- |
   std::string name;                         // name of the camera context

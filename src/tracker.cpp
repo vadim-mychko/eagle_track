@@ -154,15 +154,66 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
     // | --------- try getting information from the other camera  ----------- |
     // get the dimension estimate of the target in a thread-safe manner
     double width, height;
+    ros::Time stamp;
     {
       std::lock_guard lock(cc.exchange_mutex);
       width = cc.exchange_bbox.width;
       height = cc.exchange_bbox.height;
+      stamp = cc.exchange_stamp;
     }
 
     // | ---------- get the estimate of the center of the drone  ------------ |
     cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg);
     cv::Mat depth = bridge_image_ptr->image;
+
+    constexpr uint16_t threshold = 0; // in millimeters
+    std::vector<cv::Point3i> depth_points; // (row, col, depth)
+    for (int r = 0; r < depth.rows; ++r) {
+      for (int c = 0; c < depth.cols; ++c) {
+        const auto& depth_val = depth.at<uint16_t>(r, c);
+        if (depth_val > threshold) {
+          depth_points.emplace_back(r, c, depth_val);
+        }
+      }
+    }
+
+    std::sort(depth_points.begin(), depth_points.end(), [](const cv::Point3i& lhs, const cv::Point3i& rhs) {
+      return lhs.z < rhs.z;
+    });
+
+    constexpr double ratio = 0.1;
+    const size_t n_elements = static_cast<int>(ratio * depth_points.size());
+    double xsum = 0.0;
+    double ysum = 0.0;
+    for (auto it = depth_points.cbegin(); it != depth_points.cbegin() + n_elements; ++it) {
+      xsum += it->x;
+      ysum += it->y;
+    }
+
+    if (n_elements > 0) {
+      double target = stamp.toSec();
+      from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+        [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+          return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+      });
+
+      const auto center = cv::Point2d(xsum / n_elements, ysum / n_elements);
+      double xmin = center.x - width / 2;
+      double ymin = center.y - height / 2;
+      double xmax = xmin + width;
+      double ymax = ymin + height;
+
+      const double cam_width = cc.model.fullResolution().width;
+      const double cam_height = cc.model.fullResolution().height;
+      xmin = std::max(xmin, 0.0);
+      ymin = std::max(ymin, 0.0);
+      xmax = std::min(xmax, cam_width);
+      ymax = std::min(ymax, cam_height);
+
+      cc.bbox = cv::Rect2d(xmin, ymin, xmax - xmin, ymax - ymin);
+      cc.tracker = choose_tracker(tracker_type_);
+      cc.success = cc.tracker->init(from->image, cc.bbox);
+    }
   }
 
   // | -------- perform tracking for all images left in the buffer ---------- |
@@ -191,7 +242,8 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   // | ------------- exchange the information to the second camera ---------- |
   std::lock_guard lock(other.exchange_mutex);
   other.got_exchange = true;
-  other.exchange_bbox = self.bbox;  
+  other.exchange_bbox = self.bbox;
+  other.exchange_stamp = img_msg->header.stamp;
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
