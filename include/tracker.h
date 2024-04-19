@@ -67,6 +67,7 @@ struct CameraContext
   std::string name;                         // name of the camera context
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
   cv::Ptr<cv::Tracker> tracker;             // tracker used to predict the next bounding box
+  cv::Rect2d bbox;                          // bounding box calculated from the previous tracking inference
 
   CameraContext(const std::string& name);   // constructor with the name of the camera context
 };

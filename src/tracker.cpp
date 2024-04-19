@@ -127,7 +127,6 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     });
   }
 
-  cv::Rect2d bbox;
   if (got_detection && !points.empty()) {
     // | --------------------- projections visualization -------------------- |
     cv::Mat projection_image = from->image.clone();
@@ -148,14 +147,14 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
       max_y = std::max(max_y, point.y);
     }
 
-    bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+    cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
     cc.tracker = choose_tracker(tracker_type_);
-    cc.success = cc.tracker->init(from->image, bbox);
+    cc.success = cc.tracker->init(from->image, cc.bbox);
   }
 
   // | -------- perform tracking for all images left in the buffer ---------- |
   for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
-    cc.success = cc.tracker->update(it->image, bbox);
+    cc.success = cc.tracker->update(it->image, cc.bbox);
   }
 
   // | ----------------------- tracking visualization ----------------------- |
@@ -163,7 +162,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     publishImage(image, img_msg->header, encoding, cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, bbox, {255, 0, 0}, 3);
+    cv::rectangle(track_image, cc.bbox, {255, 0, 0}, 3);
     publishImage(track_image, img_msg->header, encoding, cc.pub_image);
   }
 }
