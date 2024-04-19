@@ -305,7 +305,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 }
 
 bool Tracker::processExchange(CameraContext& cc) {
-  if (!cc.got_exchange) {
+  if (cc.success || !cc.got_exchange) {
     return false;
   }
 
