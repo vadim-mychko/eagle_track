@@ -110,9 +110,9 @@ private:
   int tracker_type_;                                   // type of the tracker to use (chosen by the dynamic config)
 
   cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
-  void processManualDetection(CameraContext& cc, const std_msgs::Header& header);
-  void processDetection(CameraContext& cc, const std_msgs::Header& header);
-  void processExchange(CameraContext& cc);
+  bool processManualDetection(CameraContext& cc, const std_msgs::Header& header);
+  bool processDetection(CameraContext& cc, const std_msgs::Header& header);
+  bool processExchange(CameraContext& cc);
 
   // | ------------------------ coordinate transforms ----------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_; // for transforming coordinates between sensors

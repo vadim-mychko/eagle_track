@@ -96,9 +96,9 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   const auto& header = img_msg->header;
   cc.buffer.push_back({image, header.stamp});
 
-  processManualDetection(cc, header);
-  // processDetection(cc, header);
-  // processExchange(cc);
+  if (!processManualDetection(cc, header) && !processDetection(cc, header) && !processExchange(cc)) {
+    cc.success = cc.tracker->update(image, cc.bbox);
+  }
 
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
@@ -208,9 +208,9 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
   return nullptr;
 }
 
-void Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
+bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
   if (!_manual_detect_ || cc.success || cc.name != "FrontCamera") {
-    return;
+    return false;
   }
 
   const auto points = selectPoints("manual_detect", cc.buffer.back().image);
@@ -241,11 +241,13 @@ void Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
   cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(cc.buffer.back().image, cc.bbox);
+
+  return true;
 }
 
-void Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
+bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
   if (!cc.should_init || cc.detection_points.empty()) {
-    return;
+    return false;
   }
 
   // | ------- obtain the latest detection in a thread-safe manner -------- |
@@ -293,12 +295,16 @@ void Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
+
+  return true;
 }
 
-void Tracker::processExchange(CameraContext& cc) {
+bool Tracker::processExchange(CameraContext& cc) {
   if (!cc.got_exchange) {
-    return;
+    return false;
   }
+
+  return true;
 }
 
 } // namespace eagle_track
