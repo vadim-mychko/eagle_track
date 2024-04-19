@@ -107,7 +107,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     got_detection = true;
     points = selectPoints("manual_detect", image);
     from = cc.buffer.end() - 1;
-    cc.success = true;
+    cc.success = !points.empty();
   } else if (cc.should_init && !cc.detection_points.empty()) {
     got_detection = true;
     // | ------- obtain the latest detection in a thread-safe manner -------- |
