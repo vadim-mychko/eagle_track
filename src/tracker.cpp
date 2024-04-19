@@ -123,11 +123,13 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   callbackImage(img_msg, depth_msg, self);
 
   // | ------------- exchange the information to the second camera ---------- |
-  std::lock_guard lock(other.exchange_mutex);
-  other.got_exchange = true;
-  other.exchange_image = cv_bridge::toCvShare(img_msg, "bgr8")->image;
-  other.exchange_bbox = self.bbox;
-  other.exchange_stamp = img_msg->header.stamp;
+  if (self.success) {
+    std::lock_guard lock(other.exchange_mutex);
+    other.got_exchange = true;
+    other.exchange_image = cv_bridge::toCvShare(img_msg, "bgr8")->image;
+    other.exchange_bbox = self.bbox;
+    other.exchange_stamp = img_msg->header.stamp;
+  }
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
