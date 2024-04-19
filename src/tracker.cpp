@@ -315,6 +315,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   ros::Time stamp;
   {
     std::lock_guard lock(cc.exchange_mutex);
+    cc.got_exchange = false;
     image = cc.exchange_image;
     bbox = cc.exchange_bbox;
     stamp = cc.exchange_stamp;
