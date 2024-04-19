@@ -32,11 +32,15 @@ void Tracker::onInit() {
   image_transport::TransportHints hints(image_type);
 
   front_.sub_image.subscribe(it, "camera_front", 1, hints);
-  front_.sub_image.registerCallback(boost::bind(&Tracker::callbackImage, this, _1, std::ref(front_)));
+  front_.sub_depth.subscribe(it, "camera_front_depth", 1);
+  front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), front_.sub_image, front_.sub_depth);
+  front_.sync->registerCallback(boost::bind(&Tracker::callbackExchange, this, _1, _2, std::ref(front_), std::ref(down_)));
   front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
 
   down_.sub_image.subscribe(it, "camera_down", 1, hints);
-  down_.sub_image.registerCallback(boost::bind(&Tracker::callbackImage, this, _1, std::ref(down_)));
+  down_.sub_depth.subscribe(it, "camera_down_depth", 1);
+  down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), down_.sub_image, down_.sub_depth);
+  down_.sync->registerCallback(boost::bind(&Tracker::callbackImage, this, _1, _2, std::ref(down_)));
   down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
 
   front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
@@ -82,16 +86,16 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
   ROS_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
 
   // | -------------------- convert the image to BGR ------------------------ |
   const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(msg, encoding);
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(img_msg, encoding);
   cv::Mat image = bridge_image_ptr->image;
-  cc.buffer.push_back({image, msg->header.stamp});
+  cc.buffer.push_back({image, img_msg->header.stamp});
 
   // | ---------------- prepare for processing the detection ---------------- |
   bool got_detection = false;
@@ -99,7 +103,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
 
   // | ----------------- get the detection points if needed ----------------- |
-  if (_manual_detect_ && !cc.success) {
+  if (_manual_detect_ && !cc.success && cc.name == "FrontCamera") {
     got_detection = true;
     points = selectPoints("manual_detect", image);
     from = cc.buffer.end() - 1;
@@ -130,7 +134,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
     for (const auto& point : points) {
       cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
     }
-    publishImage(projection_image, msg->header, encoding, cc.pub_projections);
+    publishImage(projection_image, img_msg->header, encoding, cc.pub_projections);
 
     // | ---------- transform the detection into the bounding box ----------- |
     double min_x = cc.model.fullResolution().width;
@@ -156,12 +160,21 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
 
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
-    publishImage(image, msg->header, encoding, cc.pub_image);
+    publishImage(image, img_msg->header, encoding, cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, bbox, {255, 0, 0}, 3);
-    publishImage(track_image, msg->header, encoding, cc.pub_image);
+    publishImage(track_image, img_msg->header, encoding, cc.pub_image);
   }
+}
+
+void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other) {
+  if (!initialized_) {
+    return;
+  }
+
+  // | ------------------ perform the tracking on one camera ---------------- |
+  callbackImage(img_msg, depth_msg, self);
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
