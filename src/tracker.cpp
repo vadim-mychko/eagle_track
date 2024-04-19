@@ -174,6 +174,11 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
 
   // | ------------------ perform the tracking on one camera ---------------- |
   callbackImage(img_msg, depth_msg, self);
+
+  // | ------------- exchange the information to the second camera ---------- |
+  std::lock_guard lock(other.exchange_mutex);
+  other.got_exchange = true;
+  other.exchange_bbox = self.bbox;  
 }
 
 void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {

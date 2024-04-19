@@ -43,7 +43,6 @@ struct CameraContext
 {
   // | -------------------------------- flags ------------------------------- |
   bool got_camera_info = false; // whether received camera parameters already
-  bool success = false;         // whether successfully tracked previously
 
   // | ---------------------------- subscribers ----------------------------- |
   std::unique_ptr<message_filters::Synchronizer<policy_t>> sync; // synchronizer for the image + depth
@@ -63,11 +62,17 @@ struct CameraContext
   std::mutex sync_mutex;                         // mutex for synchronization between callbacks
   boost::circular_buffer<CvImageStamped> buffer; // buffer for storing the latest images from the image callback
 
+  // | ---------------------- exchange between cameras ---------------------- |
+  bool got_exchange = false; // whether got bounding box exchange
+  std::mutex exchange_mutex; // mutex for synchronization between exchanges
+  cv::Rect2d exchange_bbox;  // bounding box received from the latest exchange
+
   // | ------------------------- context essentials ------------------------- |
   std::string name;                         // name of the camera context
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
   cv::Ptr<cv::Tracker> tracker;             // tracker used to predict the next bounding box
   cv::Rect2d bbox;                          // bounding box calculated from the previous tracking inference
+  bool success = false;                     // whether successfully tracked previously
 
   CameraContext(const std::string& name);   // constructor with the name of the camera context
 };
