@@ -91,143 +91,17 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sen
     return;
   }
 
-  // | -------------------- convert the image to BGR ------------------------ |
-  const std::string encoding = "bgr8";
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(img_msg, encoding);
+  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = bridge_image_ptr->image;
   cc.buffer.push_back({image, img_msg->header.stamp});
 
-  // | ---------------- prepare for processing the detection ---------------- |
-  bool got_detection = false;
-  std::vector<cv::Point2d> points;
-  auto from = cc.buffer.size() == 1 ? cc.buffer.begin() : cc.buffer.end() - 2;
-
-  // | ----------------- get the detection points if needed ----------------- |
-  if (_manual_detect_ && !cc.success && cc.name == "FrontCamera") {
-    got_detection = true;
-    points = selectPoints("manual_detect", image);
-    from = cc.buffer.end() - 1;
-    cc.success = !points.empty();
-  } else if (cc.should_init && !cc.detection_points.empty()) {
-    got_detection = true;
-    // | ------- obtain the latest detection in a thread-safe manner -------- |
-    ros::Time stamp;
-    {
-      std::lock_guard lock(cc.sync_mutex);
-      cc.should_init = false;
-      points = std::move(cc.detection_points);
-      stamp = cc.detection_stamp;
-    }
-
-    // | ---------- find the closest image in terms of timestamps ----------- |
-    double target = stamp.toSec();
-    from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-      [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
-        return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
-    });
-  }
-
-  if (got_detection && !points.empty()) {
-    // | --------------------- projections visualization -------------------- |
-    cv::Mat projection_image = from->image.clone();
-    for (const auto& point : points) {
-      cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
-    }
-    publishImage(projection_image, img_msg->header, encoding, cc.pub_projections);
-
-    // | ---------- transform the detection into the bounding box ----------- |
-    double min_x = cc.model.fullResolution().width;
-    double min_y = cc.model.fullResolution().height;
-    double max_x = 0.0;
-    double max_y = 0.0;
-    for (const auto& point : points) {
-      min_x = std::min(min_x, point.x);
-      min_y = std::min(min_y, point.y);
-      max_x = std::max(max_x, point.x);
-      max_y = std::max(max_y, point.y);
-    }
-
-    cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-    cc.tracker = choose_tracker(tracker_type_);
-    cc.success = cc.tracker->init(from->image, cc.bbox);
-  } else if (cc.got_exchange) {
-    // | --------- try getting information from the other camera  ----------- |
-    // get the dimension estimate of the target in a thread-safe manner
-    double width, height;
-    ros::Time stamp;
-    {
-      std::lock_guard lock(cc.exchange_mutex);
-      width = cc.exchange_bbox.width;
-      height = cc.exchange_bbox.height;
-      stamp = cc.exchange_stamp;
-    }
-
-    // | ---------- get the estimate of the center of the drone  ------------ |
-    cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg);
-    cv::Mat depth = bridge_image_ptr->image;
-
-    constexpr uint16_t threshold = 0; // in millimeters
-    std::vector<cv::Point3i> depth_points; // (row, col, depth)
-    for (int r = 0; r < depth.rows; ++r) {
-      for (int c = 0; c < depth.cols; ++c) {
-        const auto& depth_val = depth.at<uint16_t>(r, c);
-        if (depth_val > threshold) {
-          depth_points.emplace_back(r, c, depth_val);
-        }
-      }
-    }
-
-    std::sort(depth_points.begin(), depth_points.end(), [](const cv::Point3i& lhs, const cv::Point3i& rhs) {
-      return lhs.z < rhs.z;
-    });
-
-    constexpr double ratio = 0.1;
-    const size_t n_elements = static_cast<int>(ratio * depth_points.size());
-    double xsum = 0.0;
-    double ysum = 0.0;
-    for (auto it = depth_points.cbegin(); it != depth_points.cbegin() + n_elements; ++it) {
-      xsum += it->x;
-      ysum += it->y;
-    }
-
-    if (n_elements > 0) {
-      double target = stamp.toSec();
-      from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-        [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
-          return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
-      });
-
-      const auto center = cv::Point2d(xsum / n_elements, ysum / n_elements);
-      double xmin = center.x - width / 2;
-      double ymin = center.y - height / 2;
-      double xmax = xmin + width;
-      double ymax = ymin + height;
-
-      const double cam_width = cc.model.fullResolution().width;
-      const double cam_height = cc.model.fullResolution().height;
-      xmin = std::max(xmin, 0.0);
-      ymin = std::max(ymin, 0.0);
-      xmax = std::min(xmax, cam_width);
-      ymax = std::min(ymax, cam_height);
-
-      cc.bbox = cv::Rect2d(xmin, ymin, xmax - xmin, ymax - ymin);
-      cc.tracker = choose_tracker(tracker_type_);
-      cc.success = cc.tracker->init(from->image, cc.bbox);
-    }
-  }
-
-  // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
-    cc.success = cc.tracker->update(it->image, cc.bbox);
-  }
-
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
-    publishImage(image, img_msg->header, encoding, cc.pub_image);
+    publishImage(image, img_msg->header, "bgr8", cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, cc.bbox, {255, 0, 0}, 3);
-    publishImage(track_image, img_msg->header, encoding, cc.pub_image);
+    publishImage(track_image, img_msg->header, "bgr8", cc.pub_image);
   }
 }
 
@@ -327,6 +201,104 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
   }
 
   return nullptr;
+}
+
+bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
+  if (!_manual_detect_ || cc.success || cc.name != "FrontCamera") {
+    return false;
+  }
+
+  auto points = selectPoints("manual_detect", cc.buffer.back().image);
+
+  // | ---------------------- projections visualization --------------------- |
+  cv::Mat projection_image = cc.buffer.back().image;
+  for (const auto& point : points) {
+    cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
+  }
+  publishImage(projection_image, header, "bgr8", cc.pub_projections);
+
+  // | ----------- transform the detection into the bounding box ------------ |
+  double min_x = cc.model.fullResolution().width;
+  double min_y = cc.model.fullResolution().height;
+  double max_x = 0.0;
+  double max_y = 0.0;
+  for (const auto& point : points) {
+    min_x = std::min(min_x, point.x);
+    min_y = std::min(min_y, point.y);
+    max_x = std::max(max_x, point.x);
+    max_y = std::max(max_y, point.y);
+  }
+
+  // | ----------------------- initialize the tracker ----------------------- |
+  cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+  cc.tracker = choose_tracker(tracker_type_);
+  cc.success = cc.tracker->init(cc.buffer.back().image, cc.bbox);
+
+  return true;
+}
+
+bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
+  if (!cc.should_init || cc.detection_points.empty()) {
+    return false;
+  }
+
+  // | ------- obtain the latest detection in a thread-safe manner -------- |
+  std::vector<cv::Point2d> points;
+  ros::Time stamp;
+  {
+    std::lock_guard lock(cc.sync_mutex);
+    cc.should_init = false;
+    points = std::move(cc.detection_points);
+    stamp = cc.detection_stamp;
+  }
+
+  // | ----------- find the closest image in terms of timestamps ------------ |
+  const double target = stamp.toSec();
+  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+  });
+
+  // | ---------------------- projections visualization --------------------- |
+  cv::Mat projection_image = from->image.clone();
+  for (const auto& point : points) {
+    cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
+  }
+  publishImage(projection_image, header, "bgr8", cc.pub_projections);
+
+  // | ----------- transform the detection into the bounding box ------------ |
+  double min_x = cc.model.fullResolution().width;
+  double min_y = cc.model.fullResolution().height;
+  double max_x = 0.0;
+  double max_y = 0.0;
+  for (const auto& point : points) {
+    min_x = std::min(min_x, point.x);
+    min_y = std::min(min_y, point.y);
+    max_x = std::max(max_x, point.x);
+    max_y = std::max(max_y, point.y);
+  }
+
+  // | ----------------------- initialize the tracker ----------------------- |
+  cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
+  cc.tracker = choose_tracker(tracker_type_);
+  cc.success = cc.tracker->init(from->image, cc.bbox);
+
+  // | -------- perform tracking for all images left in the buffer ---------- |
+  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
+    cc.success = cc.tracker->update(it->image, cc.bbox);
+  }
+  
+  return true;
+}
+
+bool Tracker::processExchange(CameraContext& cc) {
+  if (!cc.got_exchange) {
+    return false;
+  }
+
+
+
+  return true;
 }
 
 } // namespace eagle_track

@@ -75,7 +75,7 @@ struct CameraContext
   cv::Rect2d bbox;                          // bounding box calculated from the previous tracking inference
   bool success = false;                     // whether successfully tracked previously
 
-  CameraContext(const std::string& name);   // constructor with the name of the camera context
+  CameraContext(const std::string& name); // constructor with the name of the camera context
 };
 
 class Tracker : public nodelet::Nodelet {
@@ -110,6 +110,9 @@ private:
   int tracker_type_;                                   // type of the tracker to use (chosen by the dynamic config)
 
   cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
+  bool processManualDetection(CameraContext& cc, const std_msgs::Header& header);
+  bool processDetection(CameraContext& cc, const std_msgs::Header& header);
+  bool processExchange(CameraContext& cc);
 
   // | ------------------------ coordinate transforms ----------------------- |
   std::unique_ptr<mrs_lib::Transformer> transformer_; // for transforming coordinates between sensors
