@@ -86,7 +86,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
   ROS_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
@@ -150,6 +150,19 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
     cc.tracker = choose_tracker(tracker_type_);
     cc.success = cc.tracker->init(from->image, cc.bbox);
+  } else if (cc.got_exchange) {
+    // | --------- try getting information from the other camera  ----------- |
+    // get the dimension estimate of the target in a thread-safe manner
+    double width, height;
+    {
+      std::lock_guard lock(cc.exchange_mutex);
+      width = cc.exchange_bbox.width;
+      height = cc.exchange_bbox.height;
+    }
+
+    // | ---------- get the estimate of the center of the drone  ------------ |
+    cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(depth_msg);
+    cv::Mat depth = bridge_image_ptr->image;
   }
 
   // | -------- perform tracking for all images left in the buffer ---------- |
