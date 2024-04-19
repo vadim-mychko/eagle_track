@@ -93,17 +93,20 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
 
   cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = img_bridge->image;
-  cc.buffer.push_back({image, img_msg->header.stamp});
+  const auto& header = img_msg->header;
+  cc.buffer.push_back({image, header.stamp});
 
-  processManualDetection(cc, img_msg->header) || processDetection(cc, img_msg->header) || processExchange(cc);
+  processManualDetection(cc, header);
+  processDetection(cc, header);
+  processExchange(cc);
 
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
-    publishImage(image, img_msg->header, "bgr8", cc.pub_image);
+    publishImage(image, header, "bgr8", cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, cc.bbox, {255, 0, 0}, 3);
-    publishImage(track_image, img_msg->header, "bgr8", cc.pub_image);
+    publishImage(track_image, header, "bgr8", cc.pub_image);
   }
 }
 
@@ -205,9 +208,9 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
   return nullptr;
 }
 
-bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
+void Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
   if (!_manual_detect_ || cc.success || cc.name != "FrontCamera") {
-    return false;
+    return;
   }
 
   auto points = selectPoints("manual_detect", cc.buffer.back().image);
@@ -235,13 +238,11 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
   cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(cc.buffer.back().image, cc.bbox);
-
-  return true;
 }
 
-bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
+void Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
   if (!cc.should_init || cc.detection_points.empty()) {
-    return false;
+    return;
   }
 
   // | ------- obtain the latest detection in a thread-safe manner -------- |
@@ -289,16 +290,12 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
-  
-  return true;
 }
 
-bool Tracker::processExchange(CameraContext& cc) {
+void Tracker::processExchange(CameraContext& cc) {
   if (!cc.got_exchange) {
-    return false;
+    return;
   }
-
-  return true;
 }
 
 } // namespace eagle_track
