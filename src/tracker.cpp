@@ -97,8 +97,8 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   cc.buffer.push_back({image, header.stamp});
 
   processManualDetection(cc, header);
-  processDetection(cc, header);
-  processExchange(cc);
+  // processDetection(cc, header);
+  // processExchange(cc);
 
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
@@ -213,7 +213,10 @@ void Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
     return;
   }
 
-  auto points = selectPoints("manual_detect", cc.buffer.back().image);
+  const auto points = selectPoints("manual_detect", cc.buffer.back().image);
+  if (points.empty()) {
+    return;
+  }
 
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = cc.buffer.back().image.clone();
