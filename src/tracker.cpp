@@ -86,14 +86,16 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
   ROS_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
 
-  cv_bridge::CvImageConstPtr bridge_image_ptr = cv_bridge::toCvShare(img_msg, "bgr8");
-  cv::Mat image = bridge_image_ptr->image;
+  cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
+  cv::Mat image = img_bridge->image;
   cc.buffer.push_back({image, img_msg->header.stamp});
+
+  processManualDetection(cc, img_msg->header) || processDetection(cc, img_msg->header) || processExchange(cc);
 
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
@@ -211,7 +213,7 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
   auto points = selectPoints("manual_detect", cc.buffer.back().image);
 
   // | ---------------------- projections visualization --------------------- |
-  cv::Mat projection_image = cc.buffer.back().image;
+  cv::Mat projection_image = cc.buffer.back().image.clone();
   for (const auto& point : points) {
     cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
   }
@@ -295,8 +297,6 @@ bool Tracker::processExchange(CameraContext& cc) {
   if (!cc.got_exchange) {
     return false;
   }
-
-
 
   return true;
 }
