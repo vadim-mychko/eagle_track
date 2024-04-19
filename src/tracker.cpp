@@ -87,7 +87,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
 
   cc.got_camera_info = true;
   cc.model.fromCameraInfo(*msg);
-  ROS_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
+  ROS_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
 }
 
 void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
