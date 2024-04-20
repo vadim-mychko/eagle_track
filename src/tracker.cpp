@@ -36,14 +36,13 @@ void Tracker::onInit() {
   front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), front_.sub_image, front_.sub_depth);
   front_.sync->registerCallback(boost::bind(&Tracker::callbackExchange, this, _1, _2, std::ref(front_), std::ref(down_)));
   front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
+  front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
 
   down_.sub_image.subscribe(it, "camera_down", 1, hints);
   down_.sub_depth.subscribe(it, "camera_down_depth", 1);
   down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), down_.sub_image, down_.sub_depth);
   down_.sync->registerCallback(boost::bind(&Tracker::callbackImage, this, _1, _2, std::ref(down_)));
   down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
-
-  front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
   down_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(down_)));
 
   // | ----------------------------- publishers ----------------------------- |
@@ -53,13 +52,12 @@ void Tracker::onInit() {
   down_.pub_image = it.advertise("tracker_down", 1);
   down_.pub_projections = it.advertise("projections_down", 1);
 
-  // | -------------------------- synchronization --------------------------- |
-  front_.buffer.set_capacity(image_buffer_size);
-  down_.buffer.set_capacity(image_buffer_size);
-
-  // | ------------------------- context essentials ------------------------- |
+  // | -------------------------- camera contexts --------------------------- |
   front_.tracker = choose_tracker(tracker_type_);
+  front_.buffer.set_capacity(image_buffer_size);
+
   down_.tracker = choose_tracker(tracker_type_);
+  down_.buffer.set_capacity(image_buffer_size);
 
   // | ------------------------ coordinate transforms ----------------------- |
   transformer_ = std::make_unique<mrs_lib::Transformer>("Tracker");
