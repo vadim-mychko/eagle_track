@@ -257,7 +257,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
     return false;
   }
 
-  // | ------- obtain the latest detection in a thread-safe manner -------- |
+  // | -------- obtain the latest detection in a thread-safe manner --------- |
   std::vector<cv::Point2d> points;
   ros::Time stamp;
   {
