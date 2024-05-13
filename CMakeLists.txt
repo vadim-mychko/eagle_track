@@ -28,7 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
   lidar_tracker
 )
 
-find_package(OpenCV REQUIRED )
+find_package(OpenCV 4.9.0 REQUIRED)
 
 generate_dynamic_reconfigure_options(
   config/TrackParams.cfg
