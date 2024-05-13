@@ -66,14 +66,14 @@ struct CameraContext
   bool got_exchange = false; // whether got bounding box exchange
   std::mutex exchange_mutex; // mutex for synchronization between exchanges
   cv::Mat exchange_image;    // image received from the latest exchange
-  cv::Rect2d exchange_bbox;  // bounding box received from the latest exchange
+  cv::Rect exchange_bbox;  // bounding box received from the latest exchange
   ros::Time exchange_stamp;  // timestamp of the latest exchange
 
   // | ------------------------- context essentials ------------------------- |
   std::string name;                         // name of the camera context
   image_geometry::PinholeCameraModel model; // camera model for projection of 3d points
   cv::Ptr<cv::Tracker> tracker;             // tracker used to predict the next bounding box
-  cv::Rect2d bbox;                          // bounding box calculated from the previous tracking inference
+  cv::Rect bbox;                          // bounding box calculated from the previous tracking inference
   bool success = false;                     // whether successfully tracked previously
 
   CameraContext(const std::string& name); // constructor with the name of the camera context
