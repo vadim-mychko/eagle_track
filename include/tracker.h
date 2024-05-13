@@ -8,7 +8,7 @@
 #include <nodelet/nodelet.h>
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/tracking/tracker.hpp>
+#include <opencv2/video/tracking.hpp>
 #include <cv_bridge/cv_bridge.h>
 
 #include <image_transport/image_transport.h>
