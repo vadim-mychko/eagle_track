@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.1.2)
 project(eagle_track)
 
-# Set the path to the OpenCV 4.9.0 installation directory
-set(OpenCV_DIR /home/mychkvad/opencv-4.9.0/build)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -28,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   lidar_tracker
 )
 
+# define OpenCV_DIR with the path to the directory containing OpenCVConfig.cmake
 find_package(OpenCV 4.9.0 REQUIRED)
 
 generate_dynamic_reconfigure_options(
