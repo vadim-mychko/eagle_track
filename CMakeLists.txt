@@ -44,6 +44,9 @@ catkin_package(
 ## Build ##
 ###########
 
+# Remove the OpenCV 4.2.0 header files to avoid collisions
+list(REMOVE_ITEM catkin_INCLUDE_DIRS "/usr/include/opencv4")
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include
