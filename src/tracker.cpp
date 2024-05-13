@@ -53,10 +53,10 @@ void Tracker::onInit() {
   down_.pub_projections = it.advertise("projections_down", 1);
 
   // | -------------------------- camera contexts --------------------------- |
-  front_.tracker = choose_tracker(tracker_type_);
+  front_.tracker = create_tracker();
   front_.buffer.set_capacity(image_buffer_size);
 
-  down_.tracker = choose_tracker(tracker_type_);
+  down_.tracker = create_tracker();
   down_.buffer.set_capacity(image_buffer_size);
 
   // | ------------------------ coordinate transforms ----------------------- |
@@ -74,9 +74,7 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
-void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {
-  tracker_type_ = config.tracker_type;
-}
+void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {}
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
   if (!initialized_ || cc.got_camera_info) {
@@ -198,19 +196,9 @@ void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header,
   pub.publish(out_msg);
 }
 
-cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
-  switch (tracker_type) {
-    case eagle_track::TrackParams_Boosting: return cv::TrackerBoosting::create();
-    case eagle_track::TrackParams_MIL: return cv::TrackerMIL::create();
-    case eagle_track::TrackParams_KCF: return cv::TrackerKCF::create();
-    case eagle_track::TrackParams_TLD: return cv::TrackerTLD::create();
-    case eagle_track::TrackParams_MedianFlow: return cv::TrackerMedianFlow::create();
-    case eagle_track::TrackParams_GOTURN: return cv::TrackerGOTURN::create();
-    case eagle_track::TrackParams_MOSSE: return cv::TrackerMOSSE::create();
-    case eagle_track::TrackParams_CSRT: return cv::TrackerCSRT::create();
-  }
-
-  return nullptr;
+cv::Ptr<cv::Tracker> Tracker::create_tracker() {
+  auto tracker = cv::TrackerNano::create();
+  return tracker;
 }
 
 bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
@@ -244,7 +232,7 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
 
   // | ----------------------- initialize the tracker ----------------------- |
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-  cc.tracker = choose_tracker(tracker_type_);
+  cc.tracker = create_tracker();
   cc.success = cc.tracker->init(cc.buffer.back().image, cc.bbox);
 
   return true;
@@ -293,7 +281,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 
   // | ----------------------- initialize the tracker ----------------------- |
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-  cc.tracker = choose_tracker(tracker_type_);
+  cc.tracker = create_tracker();
   cc.success = cc.tracker->init(from->image, cc.bbox);
 
   // | -------- perform tracking for all images left in the buffer ---------- |
@@ -323,7 +311,7 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
-  cc.tracker = choose_tracker(tracker_type_);
+  cc.tracker = create_tracker();
   cc.success = cc.tracker->init(image, bbox);
 
   // | ----------- find the closest image in terms of timestamps ------------ |

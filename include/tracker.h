@@ -108,9 +108,8 @@ private:
   // | ------------------------- tracker essentials ------------------------- |
   CameraContext front_ = CameraContext("FrontCamera"); // camera context for the front camera
   CameraContext down_ = CameraContext("DownCamera");   // camera context for the down camera
-  int tracker_type_ = eagle_track::TrackParams_KCF;    // type of the tracker to use (chosen by the dynamic config)
 
-  cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
+  cv::Ptr<cv::Tracker> create_tracker();
   bool processManualDetection(CameraContext& cc, const std_msgs::Header& header);
   bool processDetection(CameraContext& cc, const std_msgs::Header& header);
   bool processExchange(CameraContext& cc);
