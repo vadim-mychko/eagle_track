@@ -6,8 +6,8 @@ BUILD_DIR="$TARGET_DIR/build"
 INSTALL_DIR="$TARGET_DIR/install"
 
 PYTHON_VER=310
-PYTHON_EXEC="$HOME/eagle_eval/venv/bin/python"
-PYTHON_PKG="$HOME/eagle_eval/venv/lib/python3.10/site-packages"
+PYTHON_EXEC="$HOME/git/eagle_track/venv/bin/python"
+PYTHON_PKG="$HOME/git/eagle_track/venv/lib/python3.10/site-packages"
 PYTHON_HEADERS="$HOME/.pyenv/versions/3.10.13/include/python3.10"
 PYTHON_LIB="$HOME/.pyenv/versions/3.10.13/lib/libpython3.10.so.1.0"
 
