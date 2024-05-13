@@ -4,6 +4,8 @@ project(eagle_track)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(OpenCV_DIR $ENV{OPENCV_DIR})
+
 add_compile_options(-O3)
 add_compile_options(-Wall)
 add_compile_options(-Wextra)
