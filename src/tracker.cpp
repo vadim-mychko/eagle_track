@@ -74,7 +74,7 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
 
-void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {}
+void Tracker::callbackConfig([[maybe_unused]] const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {}
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
   if (!initialized_ || cc.got_camera_info) {
