@@ -233,7 +233,8 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
   // | ----------------------- initialize the tracker ----------------------- |
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
   cc.tracker = create_tracker();
-  cc.success = cc.tracker->init(cc.buffer.back().image, cc.bbox);
+  cc.tracker->init(cc.buffer.back().image, cc.bbox);
+  cc.success = true;
 
   return true;
 }
@@ -282,7 +283,8 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   // | ----------------------- initialize the tracker ----------------------- |
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
   cc.tracker = create_tracker();
-  cc.success = cc.tracker->init(from->image, cc.bbox);
+  cc.tracker->init(from->image, cc.bbox);
+  cc.success = true;
 
   // | -------- perform tracking for all images left in the buffer ---------- |
   for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
@@ -312,7 +314,8 @@ bool Tracker::processExchange(CameraContext& cc) {
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
   cc.tracker = create_tracker();
-  cc.success = cc.tracker->init(image, bbox);
+  cc.tracker->init(image, bbox);
+  cc.success = true;
 
   // | ----------- find the closest image in terms of timestamps ------------ |
   const double target = stamp.toSec();
