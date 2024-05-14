@@ -1,4 +1,5 @@
 #include "tracker.h"
+#include <filesystem>
 
 namespace eagle_track
 {
@@ -109,6 +110,12 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, cc.bbox, {255, 0, 0}, 3);
     publishImage(track_image, header, "bgr8", cc.pub_image);
+  }
+
+  if (cc.name == "FrontCamera") {
+    cv::imwrite("/home/mychkvad/thesis_analysis/uav4/front/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
+  } else {
+    cv::imwrite("/home/mychkvad/thesis_analysis/uav4/down/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
   }
 }
 
@@ -334,9 +341,20 @@ bool Tracker::processExchange(CameraContext& cc) {
   });
 
   // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
+  for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
+
+  namespace fs = std::filesystem;
+  auto fp = "/home/mychkvad/thesis_analysis/uav4/both/" + std::to_string(count);
+  if (!fs::exists(fp)) {
+    fs::create_directory(fp);
+  }
+
+  cv::imwrite(fp + "/" + std::to_string(stamp.toNSec()) + ".jpg", image);
+  cv::imwrite(fp + "/" + std::to_string(from->stamp.toNSec()) + ".jpg", from->image);
+
+  ++count;
 
   return true;
 }

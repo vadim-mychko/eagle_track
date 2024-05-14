@@ -110,6 +110,7 @@ private:
   CameraContext down_ = CameraContext("DownCamera");   // camera context for the down camera
   int tracker_type_ = eagle_track::TrackParams_KCF;    // type of the tracker to use (chosen by the dynamic config)
 
+  int count = 1;
   cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
   bool processManualDetection(CameraContext& cc, const std_msgs::Header& header);
   bool processDetection(CameraContext& cc, const std_msgs::Header& header);
