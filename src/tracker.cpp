@@ -325,7 +325,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   });
 
   // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
+  for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
 
