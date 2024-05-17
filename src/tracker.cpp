@@ -226,7 +226,7 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
 
   const auto points = selectPoints("manual_detect", cc.buffer.back().image);
   if (points.empty()) {
-    return false;
+    return true;
   }
 
   NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Processing manual detections");
