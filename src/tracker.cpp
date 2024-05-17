@@ -229,6 +229,8 @@ bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& 
     return false;
   }
 
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Processing manual detections");
+
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = cc.buffer.back().image.clone();
   for (const auto& point : points) {
@@ -260,6 +262,8 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   if (!cc.should_init || cc.detection_points.empty()) {
     return false;
   }
+
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Processing detections from LiDAR");
 
   // | -------- obtain the latest detection in a thread-safe manner --------- |
   std::vector<cv::Point2d> points;
@@ -314,6 +318,8 @@ bool Tracker::processExchange(CameraContext& cc) {
   if (cc.success || !cc.got_exchange) {
     return false;
   }
+
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: Processing exchange from another camera");
 
   // | -------- obtain the latest exchange in a thread-safe manner ---------- |
   cv::Mat image;
