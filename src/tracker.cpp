@@ -311,7 +311,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 }
 
 bool Tracker::processExchange(CameraContext& cc) {
-  if (cc.success || !cc.got_exchange) {
+  if (cc.success || !cc.got_exchange || cc.buffer.empty()) {
     return false;
   }
 
@@ -327,36 +327,6 @@ bool Tracker::processExchange(CameraContext& cc) {
     stamp = cc.exchange_stamp;
   }
 
-  auto ray = front_.model.projectPixelTo3dRay({bbox.x, bbox.y});
-
-  geometry_msgs::PointStamped near;
-  near.header.frame_id = front_.model.tfFrame();
-  near.header.stamp = stamp;
-  near.point.x = ray.x;
-  near.point.y = ray.y;
-  near.point.z = 0.001;
-
-  geometry_msgs::PointStamped far;
-  far.header.frame_id = front_.model.tfFrame();
-  far.header.stamp = stamp;
-  far.point.x = ray.x;
-  far.point.y = ray.y;
-  far.point.z = 1000;
-
-  auto nearret = transformer_->transformSingle(near, down_.model.tfFrame());
-  auto farret = transformer_->transformSingle(far, down_.model.tfFrame());
-
-  auto nearcam = nearret.value();
-  auto farcam = farret.value();
-
-  auto nearproj = down_.model.project3dToPixel({nearcam.point.x, nearcam.point.y, nearcam.point.z});
-  auto farproj = down_.model.project3dToPixel({farcam.point.x, farcam.point.y, farcam.point.z});
-
-  // // | ----------------------- initialize the tracker ----------------------- |
-  // // initialization is done on the image and bounding box from the camera that exchanged information
-  // cc.tracker = choose_tracker(tracker_type_);
-  // cc.success = cc.tracker->init(image, bbox);
-
   // | ----------- find the closest image in terms of timestamps ------------ |
   const double target = stamp.toSec();
   auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
@@ -364,11 +334,47 @@ bool Tracker::processExchange(CameraContext& cc) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
 
-  auto image_copy = from->image.clone();
-  cv::line(image_copy, nearproj, farproj, {0, 0, 255}, 3);
+  auto exchange_image = from->image.clone();
+
+  std::vector<cv::Point2d> corners;
+  corners.push_back({bbox.x, bbox.y});
+  corners.push_back({bbox.x + bbox.width, bbox.y});
+  corners.push_back({bbox.x, bbox.y + bbox.height});
+  corners.push_back({bbox.x + bbox.width, bbox.y + bbox.height});
+
+  for (const auto& corner : corners) {
+    auto ray = front_.model.projectPixelTo3dRay(corner);
+
+    geometry_msgs::PointStamped near;
+    near.header.frame_id = front_.model.tfFrame();
+    near.header.stamp = stamp;
+    near.point.x = ray.x;
+    near.point.y = ray.y;
+    near.point.z = 0.001;
+
+    geometry_msgs::PointStamped far;
+    far.header.frame_id = front_.model.tfFrame();
+    far.header.stamp = stamp;
+    far.point.x = ray.x;
+    far.point.y = ray.y;
+    far.point.z = 1000;
+
+    auto nearret = transformer_->transformSingle(near, down_.model.tfFrame());
+    auto farret = transformer_->transformSingle(far, down_.model.tfFrame());
+
+    auto nearcam = nearret.value();
+    auto farcam = farret.value();
+
+    auto nearproj = down_.model.project3dToPixel({nearcam.point.x, nearcam.point.y, nearcam.point.z});
+    auto farproj = down_.model.project3dToPixel({farcam.point.x, farcam.point.y, farcam.point.z});
+
+    cv::line(exchange_image, nearproj, farproj, {0, 0, 255}, 3);
+  }
+
   std_msgs::Header header;
+  header.frame_id = down_.model.tfFrame();
   header.stamp = from->stamp;
-  publishImage(image_copy, header, "bgr8", down_.pub_projections);
+  publishImage(exchange_image, header, "bgr8", down_.pub_projections);
 
   // // | -------- perform tracking for all images left in the buffer ---------- |
   // for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
