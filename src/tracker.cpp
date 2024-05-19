@@ -327,22 +327,26 @@ bool Tracker::processExchange(CameraContext& cc) {
     stamp = cc.exchange_stamp;
   }
 
-  // | ----------------------- initialize the tracker ----------------------- |
-  // initialization is done on the image and bounding box from the camera that exchanged information
-  cc.tracker = choose_tracker(tracker_type_);
-  cc.success = cc.tracker->init(image, bbox);
+  auto ray = front_.model.projectPixelTo3dRay({bbox.x, bbox.y});
+  cv::Point3d near{ray.x, ray.y, 0.1};
+  cv::Point3d far{ray.x, ray.y, 100};
 
-  // | ----------- find the closest image in terms of timestamps ------------ |
-  const double target = stamp.toSec();
-  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
-      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
-  });
+  // // | ----------------------- initialize the tracker ----------------------- |
+  // // initialization is done on the image and bounding box from the camera that exchanged information
+  // cc.tracker = choose_tracker(tracker_type_);
+  // cc.success = cc.tracker->init(image, bbox);
 
-  // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
-    cc.success = cc.tracker->update(it->image, cc.bbox);
-  }
+  // // | ----------- find the closest image in terms of timestamps ------------ |
+  // const double target = stamp.toSec();
+  // auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+  //   [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+  //     return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+  // });
+
+  // // | -------- perform tracking for all images left in the buffer ---------- |
+  // for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
+  //   cc.success = cc.tracker->update(it->image, cc.bbox);
+  // }
 
   return true;
 }
