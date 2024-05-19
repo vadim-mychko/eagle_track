@@ -120,6 +120,58 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   // | ------------------ perform the tracking on one camera ---------------- |
   callbackImage(img_msg, depth_msg, self);
 
+  auto bbox = self.bbox;
+  auto stamp = img_msg->header.stamp;
+
+  // | ----------- find the closest image in terms of timestamps ------------ |
+  const double target = stamp.toSec();
+  auto from = std::min_element(down_.buffer.begin(), down_.buffer.end(),
+    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+  });
+
+  auto exchange_image = from->image.clone();
+
+  std::vector<cv::Point2d> corners;
+  corners.push_back({bbox.x, bbox.y});
+  corners.push_back({bbox.x + bbox.width, bbox.y});
+  corners.push_back({bbox.x, bbox.y + bbox.height});
+  corners.push_back({bbox.x + bbox.width, bbox.y + bbox.height});
+
+  for (const auto& corner : corners) {
+    auto ray = front_.model.projectPixelTo3dRay(corner);
+
+    geometry_msgs::PointStamped near;
+    near.header.frame_id = front_.model.tfFrame();
+    near.header.stamp = stamp;
+    near.point.x = ray.x;
+    near.point.y = ray.y;
+    near.point.z = 0.001;
+
+    geometry_msgs::PointStamped far;
+    far.header.frame_id = front_.model.tfFrame();
+    far.header.stamp = stamp;
+    far.point.x = ray.x;
+    far.point.y = ray.y;
+    far.point.z = 1000;
+
+    auto nearret = transformer_->transformSingle(near, down_.model.tfFrame());
+    auto farret = transformer_->transformSingle(far, down_.model.tfFrame());
+
+    auto nearcam = nearret.value();
+    auto farcam = farret.value();
+
+    auto nearproj = down_.model.project3dToPixel({nearcam.point.x, nearcam.point.y, nearcam.point.z});
+    auto farproj = down_.model.project3dToPixel({farcam.point.x, farcam.point.y, farcam.point.z});
+
+    cv::line(exchange_image, nearproj, farproj, {0, 0, 255}, 3);
+  }
+
+  std_msgs::Header header;
+  header.frame_id = down_.model.tfFrame();
+  header.stamp = from->stamp;
+  publishImage(exchange_image, header, "bgr8", down_.pub_projections);
+
   // | ------------- exchange the information to the second camera ---------- |
   if (self.success) {
     std::lock_guard lock(other.exchange_mutex);
@@ -326,55 +378,6 @@ bool Tracker::processExchange(CameraContext& cc) {
     bbox = cc.exchange_bbox;
     stamp = cc.exchange_stamp;
   }
-
-  // | ----------- find the closest image in terms of timestamps ------------ |
-  const double target = stamp.toSec();
-  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
-      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
-  });
-
-  auto exchange_image = from->image.clone();
-
-  std::vector<cv::Point2d> corners;
-  corners.push_back({bbox.x, bbox.y});
-  corners.push_back({bbox.x + bbox.width, bbox.y});
-  corners.push_back({bbox.x, bbox.y + bbox.height});
-  corners.push_back({bbox.x + bbox.width, bbox.y + bbox.height});
-
-  for (const auto& corner : corners) {
-    auto ray = front_.model.projectPixelTo3dRay(corner);
-
-    geometry_msgs::PointStamped near;
-    near.header.frame_id = front_.model.tfFrame();
-    near.header.stamp = stamp;
-    near.point.x = ray.x;
-    near.point.y = ray.y;
-    near.point.z = 0.001;
-
-    geometry_msgs::PointStamped far;
-    far.header.frame_id = front_.model.tfFrame();
-    far.header.stamp = stamp;
-    far.point.x = ray.x;
-    far.point.y = ray.y;
-    far.point.z = 1000;
-
-    auto nearret = transformer_->transformSingle(near, down_.model.tfFrame());
-    auto farret = transformer_->transformSingle(far, down_.model.tfFrame());
-
-    auto nearcam = nearret.value();
-    auto farcam = farret.value();
-
-    auto nearproj = down_.model.project3dToPixel({nearcam.point.x, nearcam.point.y, nearcam.point.z});
-    auto farproj = down_.model.project3dToPixel({farcam.point.x, farcam.point.y, farcam.point.z});
-
-    cv::line(exchange_image, nearproj, farproj, {0, 0, 255}, 3);
-  }
-
-  std_msgs::Header header;
-  header.frame_id = down_.model.tfFrame();
-  header.stamp = from->stamp;
-  publishImage(exchange_image, header, "bgr8", down_.pub_projections);
 
   // // | -------- perform tracking for all images left in the buffer ---------- |
   // for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
