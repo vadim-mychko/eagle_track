@@ -132,6 +132,9 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
 
   auto exchange_image = from->image.clone();
 
+  auto bridge = cv_bridge::toCvShare(depth_msg);
+  cv::Mat depth = bridge->image;
+
   std::vector<cv::Point2d> corners;
   corners.push_back({bbox.x, bbox.y});
   corners.push_back({bbox.x + bbox.width, bbox.y});
@@ -141,30 +144,35 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   for (const auto& corner : corners) {
     auto ray = front_.model.projectPixelTo3dRay(corner);
 
+    constexpr double mm2m = 1e-3;
     geometry_msgs::PointStamped near;
     near.header.frame_id = front_.model.tfFrame();
     near.header.stamp = stamp;
     near.point.x = ray.x;
     near.point.y = ray.y;
-    near.point.z = 0.001;
+    double depth_num = depth.at<uint16_t>({corner.x, corner.y}) * mm2m;
+    NODELET_INFO_STREAM("DEPTH "<<depth_num);
+    near.point.z = depth.at<uint16_t>({corner.x, corner.y});
 
-    geometry_msgs::PointStamped far;
-    far.header.frame_id = front_.model.tfFrame();
-    far.header.stamp = stamp;
-    far.point.x = ray.x;
-    far.point.y = ray.y;
-    far.point.z = 1000;
+    // geometry_msgs::PointStamped far;
+    // far.header.frame_id = front_.model.tfFrame();
+    // far.header.stamp = stamp;
+    // far.point.x = ray.x;
+    // far.point.y = ray.y;
+    // far.point.z = 1000;
 
     auto nearret = transformer_->transformSingle(near, down_.model.tfFrame());
-    auto farret = transformer_->transformSingle(far, down_.model.tfFrame());
+    // auto farret = transformer_->transformSingle(far, down_.model.tfFrame());
 
     auto nearcam = nearret.value();
-    auto farcam = farret.value();
+    // auto farcam = farret.value();
 
     auto nearproj = down_.model.project3dToPixel({nearcam.point.x, nearcam.point.y, nearcam.point.z});
-    auto farproj = down_.model.project3dToPixel({farcam.point.x, farcam.point.y, farcam.point.z});
+    // auto farproj = down_.model.project3dToPixel({farcam.point.x, farcam.point.y, farcam.point.z});
 
-    cv::line(exchange_image, nearproj, farproj, {0, 0, 255}, 3);
+    NODELET_INFO_STREAM("POINT"<<nearproj);
+    cv::circle(exchange_image, nearproj, 7, {0, 0, 255}, -1);
+    // cv::line(exchange_image, nearproj, farproj, {0, 0, 255}, 3);
   }
 
   std_msgs::Header header;
