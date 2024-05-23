@@ -334,6 +334,10 @@ bool Tracker::processExchange(CameraContext& cc) {
     stamp = cc.exchange_stamp;
   }
 
+  if ((bbox.y + bbox.height) > 185.0) {
+    return false;
+  }
+
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
   cc.tracker = choose_tracker(tracker_type_);
