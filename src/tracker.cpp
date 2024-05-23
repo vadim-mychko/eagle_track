@@ -211,7 +211,13 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
     case eagle_track::TrackParams_MIL: return cv::TrackerMIL::create();
     case eagle_track::TrackParams_KCF: return cv::TrackerKCF::create();
     case eagle_track::TrackParams_TLD: return cv::TrackerTLD::create();
-    case eagle_track::TrackParams_MedianFlow: return cv::TrackerMedianFlow::create();
+    case eagle_track::TrackParams_MedianFlow: {
+      auto params = cv::TrackerMedianFlow::Params();
+      params.maxLevel = 4;
+      params.winSize = {21, 21};
+      params.termCriteria = cv::TermCriteria(cv::TermCriteria::EPS, 0, 0.01);
+      return cv::TrackerMedianFlow::create(params);
+    }
     case eagle_track::TrackParams_GOTURN: return cv::TrackerGOTURN::create();
     case eagle_track::TrackParams_MOSSE: return cv::TrackerMOSSE::create();
     case eagle_track::TrackParams_CSRT: return cv::TrackerCSRT::create();
@@ -312,7 +318,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 }
 
 bool Tracker::processExchange(CameraContext& cc) {
-  if (cc.success || !cc.got_exchange) {
+  if (!cc.got_exchange) {
     return false;
   }
 
