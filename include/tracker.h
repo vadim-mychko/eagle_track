@@ -92,8 +92,8 @@ private:
 
   // | ---------------------------- subscribers ----------------------------- |
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
-  void callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc);
-  void callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other);
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);
+  void callbackExchange(const sensor_msgs::ImageConstPtr& msg, CameraContext& self, CameraContext& other);
   void callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc);
 
   // | ----------------------------- publishers ----------------------------- |
