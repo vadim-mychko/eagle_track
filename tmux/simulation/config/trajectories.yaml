@@ -11,5 +11,5 @@ trajectory:
   # Options specified here will override the common options above.
   uavs:
     uav91:
-      filename: "circle_small.txt"
+      filename: "circle_medium.txt"
       offset: [5.0, 0.0, 0.0, 1.57]      # [x, y, z, heading]  heading = pi / 2
