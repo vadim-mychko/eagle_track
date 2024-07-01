@@ -41,9 +41,9 @@ struct CameraContext
   bool got_camera_info = false; // whether received camera parameters already
 
   // | ---------------------------- subscribers ----------------------------- |
-  ros::Subscriber sub_info;                    // for receiving camera parameters
+  ros::Subscriber sub_info;              // for receiving camera parameters
   image_transport::Subscriber sub_image; // for receiving images from the camera
-  ros::Subscriber sub_detection;               // for receiving incoming detections
+  ros::Subscriber sub_detection;         // for receiving incoming detections
 
   // | ----------------------------- publishers ----------------------------- |
   image_transport::Publisher pub_image;       // for publishing images + tracking result (points, bounding box, etc.)
