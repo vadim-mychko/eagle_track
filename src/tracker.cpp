@@ -168,7 +168,7 @@ void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, Camera
 
   // | ---------------------- update the camera context --------------------- |
   std::lock_guard lock(cc.detection_mutex);
-  cc.should_init = true;
+  cc.got_detection = true;
   cc.detection_points = std::move(projections);
   cc.detection_stamp = points.header.stamp;
 }
@@ -207,7 +207,7 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
 }
 
 bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
-  if (!cc.should_init || cc.detection_points.empty()) {
+  if (!cc.got_detection || cc.detection_points.empty()) {
     return false;
   }
 
@@ -216,7 +216,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   ros::Time stamp;
   {
     std::lock_guard lock(cc.detection_mutex);
-    cc.should_init = false;
+    cc.got_detection = false;
     points = std::move(cc.detection_points);
     stamp = cc.detection_stamp;
   }
