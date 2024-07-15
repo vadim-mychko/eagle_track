@@ -80,9 +80,12 @@ private:
   bool initialized_ = false; // whether the nodelet is initialized (after calling onInit())
 
   // | -------------------------- static parameters ------------------------- |
-  double _throttle_period_; // parameter regulating frequency of log messages
+  double _throttle_period_ = 1.0; // parameter regulating frequency of log messages 
 
   // | -------------------------- dynamic parameters ------------------------ |
+  int _tracker_type_ = eagle_track::TrackParams_MedianFlow; // type of the tracker to use (chosen by the dynamic config)
+  int _detection_points_threshold_ = 10;                    // described at config/TrackParams.cfg
+
   std::unique_ptr<drmgr_t> drmgr_;                                                   // dynamic config manager
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback
 
@@ -98,7 +101,6 @@ private:
   // | ------------------------- tracker essentials ------------------------- |
   CameraContext front_ = CameraContext("FrontCamera");     // camera context for the front camera
   CameraContext down_ = CameraContext("DownCamera");       // camera context for the down camera
-  int tracker_type_ = eagle_track::TrackParams_MedianFlow; // type of the tracker to use (chosen by the dynamic config)
 
   cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
   bool processDetection(CameraContext& cc, const std_msgs::Header& header);

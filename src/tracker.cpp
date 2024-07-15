@@ -46,10 +46,10 @@ void Tracker::onInit() {
   down_.pub_projections = it.advertise("projections_down", 1);
 
   // | -------------------------- camera contexts --------------------------- |
-  front_.tracker = choose_tracker(tracker_type_);
+  front_.tracker = choose_tracker(_tracker_type_);
   front_.buffer.set_capacity(image_buffer_size);
 
-  down_.tracker = choose_tracker(tracker_type_);
+  down_.tracker = choose_tracker(_tracker_type_);
   down_.buffer.set_capacity(image_buffer_size);
 
   // | ------------------------ coordinate transforms ----------------------- |
@@ -62,7 +62,8 @@ void Tracker::onInit() {
 }
 
 void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {
-  tracker_type_ = config.tracker_type;
+  _tracker_type_ = config.tracker_type;
+  _detection_points_threshold_ = config.detection_points_threshold;
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
@@ -212,7 +213,8 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
 }
 
 bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
-  if (cc.success || !cc.got_detection || cc.detection_points.empty()) {
+  if (!cc.got_detection
+      || (cc.success && cc.detection_points.size() < _detection_points_threshold_)) {
     return false;
   }
 
@@ -254,7 +256,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 
   // | ----------------------- initialize the tracker ----------------------- |
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-  cc.tracker = choose_tracker(tracker_type_);
+  cc.tracker = choose_tracker(_tracker_type_);
   cc.success = cc.tracker->init(from->image, cc.bbox);
 
   // | -------- perform tracking for all images left in the buffer ---------- |
@@ -284,7 +286,7 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
-  cc.tracker = choose_tracker(tracker_type_);
+  cc.tracker = choose_tracker(_tracker_type_);
   cc.success = cc.tracker->init(image, bbox);
 
   // | ----------- find the closest image in terms of timestamps ------------ |
