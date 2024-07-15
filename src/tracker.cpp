@@ -85,6 +85,11 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   const auto& header = msg->header;
   cc.buffer.push_back({image, header.stamp});
 
+  // this if statement is doing a lot:
+  // 1. checks if got a detection, and processes if needed
+  // 2. if didn't get any detection, checks if got any exchanges from any other camera, and processes if needed
+  // 3. if didn't get any detection nor exchange from any other camera, tries to perform the update with the current state
+  //    of the tracker and the newly got image
   if (!processDetection(cc, header) && !processExchange(cc)) {
     cc.success = cc.tracker->update(image, cc.bbox);
   }
