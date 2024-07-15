@@ -16,8 +16,8 @@ Package for extending [VoFOD](https://github.com/ctu-mrs/vofod) with visual inpu
 
 | Branch               | Description |
 |:---------------------|:------------|
-| flow                 | 
-| flow_old             | Initial work on integrating the LK tracker             
+| flow                 | Main branch for integrating the LK tracker 
+| flow_old             | Initial work on integrating the LK tracker, no multi-camera exchanges, mainly used as a reference point for newer branches, if after refactoring something does not work            
 | flow_rosbag          |
 | bbox_old             |
 | bbox                 |
