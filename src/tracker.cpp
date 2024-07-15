@@ -212,7 +212,7 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
 }
 
 bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
-  if (!cc.got_detection || cc.detection_points.empty()) {
+  if (cc.success || !cc.got_detection || cc.detection_points.empty()) {
     return false;
   }
 
