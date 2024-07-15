@@ -84,7 +84,7 @@ private:
 
   // | -------------------------- dynamic parameters ------------------------ |
   int _tracker_type_ = eagle_track::TrackParams_MedianFlow; // type of the tracker to use (chosen by the dynamic config)
-  size_t _detection_points_threshold_ = 10;                    // described at config/TrackParams.cfg
+  size_t _detection_points_threshold_ = 10;                 // described at config/TrackParams.cfg
 
   std::unique_ptr<drmgr_t> drmgr_;                                                   // dynamic config manager
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback
