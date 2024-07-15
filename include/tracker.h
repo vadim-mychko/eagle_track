@@ -51,7 +51,7 @@ struct CameraContext
   bool should_init = false;                      // whether should re-initialize the tracker in the image callback
   std::vector<cv::Point2d> detection_points;     // points from the latest detection
   ros::Time detection_stamp;                     // timestamp of the latest detection
-  std::mutex sync_mutex;                         // mutex for synchronization between callbacks
+  std::mutex detection_mutex;                    // mutex for synchronization between callbacks
   boost::circular_buffer<CvImageStamped> buffer; // buffer for storing the latest images from the image callback
 
   // | ---------------------- exchange between cameras ---------------------- |
