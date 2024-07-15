@@ -24,7 +24,6 @@
 namespace eagle_track
 {
 
-
 struct CvImageStamped
 {
   cv::Mat image;   // image from the camera (grayscale or RGB)
