@@ -1,8 +1,6 @@
 #ifndef TRACKER_H
 #define TRACKER_H
 
-#include "detect_selector.h"
-
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <nodelet/nodelet.h>
@@ -83,7 +81,6 @@ private:
   bool initialized_ = false; // whether the nodelet is initialized (after calling onInit())
 
   // | -------------------------- static parameters ------------------------- |
-  bool _manual_detect_;     // should use detections from the GUI or not
   double _throttle_period_; // parameter regulating frequency of log messages
 
   // | -------------------------- dynamic parameters ------------------------ |
@@ -105,7 +102,6 @@ private:
   int tracker_type_ = eagle_track::TrackParams_MedianFlow; // type of the tracker to use (chosen by the dynamic config)
 
   cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
-  bool processManualDetection(CameraContext& cc, const std_msgs::Header& header);
   bool processDetection(CameraContext& cc, const std_msgs::Header& header);
   bool processExchange(CameraContext& cc);
 

@@ -17,7 +17,6 @@ void Tracker::onInit() {
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   const auto image_type = pl.loadParam2<std::string>("image_type");
   pl.loadParam("throttle_period", _throttle_period_);
-  pl.loadParam("manual_detect", _manual_detect_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
 
   // | -------------------------- dynamic parameters ------------------------ |
@@ -58,12 +57,6 @@ void Tracker::onInit() {
   transformer_->setDefaultPrefix(uav_name);
   transformer_->retryLookupNewest(true);
 
-  // | ------------------------ detection through GUI ----------------------- |
-  if (_manual_detect_) {
-    int flags = cv::WINDOW_NORMAL | cv::WINDOW_FREERATIO | cv::WINDOW_GUI_EXPANDED;
-    cv::namedWindow("manual_detect", flags);
-  }
-
   initialized_ = true;
   NODELET_INFO_ONCE("[Tracker]: Initialized");
 }
@@ -92,7 +85,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   const auto& header = msg->header;
   cc.buffer.push_back({image, header.stamp});
 
-  if (!processManualDetection(cc, header) && !processDetection(cc, header) && !processExchange(cc)) {
+  if (!processDetection(cc, header) && !processExchange(cc)) {
     cc.success = cc.tracker->update(image, cc.bbox);
   }
 
@@ -211,43 +204,6 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
   }
 
   return nullptr;
-}
-
-bool Tracker::processManualDetection(CameraContext& cc, const std_msgs::Header& header) {
-  if (!_manual_detect_ || cc.success || cc.name != "FrontCamera") {
-    return false;
-  }
-
-  const auto points = selectPoints("manual_detect", cc.buffer.back().image);
-  if (points.empty()) {
-    return true;
-  }
-
-  // | ---------------------- projections visualization --------------------- |
-  cv::Mat projection_image = cc.buffer.back().image.clone();
-  for (const auto& point : points) {
-    cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
-  }
-  publishImage(projection_image, header, "bgr8", cc.pub_projections);
-
-  // | ----------- transform the detection into the bounding box ------------ |
-  double min_x = cc.model.fullResolution().width;
-  double min_y = cc.model.fullResolution().height;
-  double max_x = 0.0;
-  double max_y = 0.0;
-  for (const auto& point : points) {
-    min_x = std::min(min_x, point.x);
-    min_y = std::min(min_y, point.y);
-    max_x = std::max(max_x, point.x);
-    max_y = std::max(max_y, point.y);
-  }
-
-  // | ----------------------- initialize the tracker ----------------------- |
-  cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-  cc.tracker = choose_tracker(tracker_type_);
-  cc.success = cc.tracker->init(cc.buffer.back().image, cc.bbox);
-
-  return true;
 }
 
 bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {

@@ -9,9 +9,6 @@
   <arg unless="$(arg debug)" name="launch_prefix_debug" value=""/>
   <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
 
-  <!-- select manually points as detections through GUI? -->
-  <arg name="manual_detect" default="false" />
-
   <!-- nodelet-related arguments -->
   <arg name="standalone" default="true" />
   <arg name="manager" default="$(arg UAV_NAME)_tracker_manager" />
@@ -28,7 +25,6 @@
 
       <!-- Parameters loaded from launch file -->
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)" />
-      <param name="manual_detect" type="boolean" value="$(arg manual_detect)" />
       <param name="image_type" type="string" value="compressed" />
 
       <!-- Parameters loaded from YAML config file -->
