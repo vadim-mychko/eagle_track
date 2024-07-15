@@ -47,7 +47,7 @@ struct CameraContext
   image_transport::Publisher pub_image;       // for publishing images + tracking result (points, bounding box, etc.)
   image_transport::Publisher pub_projections; // for publishing 2D projections
 
-  // | -------------------------- synchronization --------------------------- |
+  // | ---------------- Detections & Cameras synchronization ---------------- |
   bool should_init = false;                      // whether should re-initialize the tracker in the image callback
   std::vector<cv::Point2d> detection_points;     // points from the latest detection
   ros::Time detection_stamp;                     // timestamp of the latest detection
