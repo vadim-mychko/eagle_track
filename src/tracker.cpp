@@ -18,6 +18,7 @@ void Tracker::onInit() {
   const auto image_type = pl.loadParam2<std::string>("image_type");
   pl.loadParam("throttle_period", _throttle_period_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
+  const auto rgbd_queue_size = pl.loadParam2<int>("rgbd_queue_size");
 
   // | -------------------------- dynamic parameters ------------------------ |
   drmgr_ = std::make_unique<drmgr_t>(nh, true, "Tracker", boost::bind(&Tracker::callbackConfig, this, _1, _2));
@@ -32,14 +33,14 @@ void Tracker::onInit() {
 
   front_.sub_image.subscribe(it, "camera_front", 1, hints);
   front_.sub_depth.subscribe(it, "camera_front_depth", 1);
-  front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), front_.sub_image, front_.sub_depth);
+  front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(rgbd_queue_size), front_.sub_image, front_.sub_depth);
   front_.sync->registerCallback(boost::bind(&Tracker::callbackExchange, this, _1, _2, std::ref(front_), std::ref(down_)));
   front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
   front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
 
   down_.sub_image.subscribe(it, "camera_down", 1, hints);
   down_.sub_depth.subscribe(it, "camera_down_depth", 1);
-  down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), down_.sub_image, down_.sub_depth);
+  down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(rgbd_queue_size), down_.sub_image, down_.sub_depth);
   down_.sync->registerCallback(boost::bind(&Tracker::callbackImage, this, _1, _2, std::ref(down_)));
   down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
   down_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(down_)));
@@ -86,6 +87,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   if (!initialized_) {
     return;
   }
+
+  constexpr double s2ms = 1000;
+  const double sync_error = std::abs(img_msg->header.stamp.toSec() - depth_msg->header.stamp.toSec()) * s2ms;
+  ROS_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing image + depth, sync_error=" << sync_error << "ms");
 
   cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = img_bridge->image;
@@ -220,20 +225,30 @@ cv::Ptr<cv::Tracker> Tracker::choose_tracker(const int tracker_type) {
 }
 
 bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header) {
-  if (!cc.got_detection || cc.detection_points.empty()
-      || (cc.success && cc.detection_points.size() < _detection_points_threshold_)) {
+  // first unsafe check, later make additional check with the safely obtained variables
+  if (!cc.got_detection || cc.detection_points.empty()) {
     return false;
   }
 
   // | -------- obtain the latest detection in a thread-safe manner --------- |
+  bool got_detection;
   std::vector<cv::Point2d> points;
   ros::Time stamp;
   {
     std::lock_guard lock(cc.detection_mutex);
+    got_detection = cc.got_detection;
     cc.got_detection = false;
     points = std::move(cc.detection_points);
     stamp = cc.detection_stamp;
   }
+
+  // second SAFE check if nothing changed during allocating the needed variables!
+  if (!got_detection || points.empty()
+      || (cc.success && points.size() < _detection_points_threshold_)) {
+    return false;
+  }
+
+  ROS_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing detection with " << points.size() << " points");
 
   // | ----------- find the closest image in terms of timestamps ------------ |
   const double target = stamp.toSec();
@@ -275,23 +290,33 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 }
 
 bool Tracker::processExchange(CameraContext& cc) {
+  // first unsafe check, later make additional check with the safely obtained variables
   if (cc.success || !cc.got_exchange) {
     return false;
   }
 
   // | -------- obtain the latest exchange in a thread-safe manner ---------- |
+  bool got_exchange;
   cv::Mat image;
   cv::Mat depth;
   cv::Rect2d bbox;
   ros::Time stamp;
   {
     std::lock_guard lock(cc.exchange_mutex);
+    got_exchange = cc.got_exchange;
     cc.got_exchange = false;
     image = cc.exchange_image;
     depth = cc.exchange_depth;
     bbox = cc.exchange_bbox;
     stamp = cc.exchange_stamp;
   }
+
+  // second SAFE check if nothing changed during allocating the needed variables!
+  if (cc.success || !got_exchange) {
+    return false;
+  }
+
+  ROS_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing exchange from the other camera");
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information

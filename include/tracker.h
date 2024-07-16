@@ -16,6 +16,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 #include <mrs_lib/transformer.h>
 #include <mrs_lib/dynamic_reconfigure_mgr.h>
@@ -34,7 +35,11 @@ struct CvImageStamped
   ros::Time stamp; // exact timestamp related to the image
 };
 
-using policy_t = message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::Image>;
+// policy type for synchronizing image + depth from RGBD cameras!
+// should be aligned perfectly and therefore ExactTime should be used as the proper policy
+// however in simulation they are not perfectly aligned (i don't know why)
+// error between synchronization in the simulation is < 0.1s (100 ms)
+using policy_t = message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image>;
 using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
 
 struct CameraContext

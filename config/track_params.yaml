@@ -3,3 +3,8 @@ throttle_period: 1.0
 
 # number of images stored in buffer for synchronization between lidar & camera
 image_buffer_size: 10
+
+# because image + depth might have different timestamps, use queue of the following size
+# i don't know why, but in the simulation image + depth are not perfectly aligned, so
+# we have to ApproximateTime policy
+rgbd_queue_size: 3
