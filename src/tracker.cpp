@@ -30,11 +30,17 @@ void Tracker::onInit() {
   image_transport::ImageTransport it(nh);
   image_transport::TransportHints hints(image_type);
 
-  front_.sub_image = it.subscribe("camera_front", 1, boost::bind(&Tracker::callbackExchange, this, _1, std::ref(front_), std::ref(down_)), ros::VoidPtr(), hints);
+  front_.sub_image.subscribe(it, "camera_front", 1, hints);
+  front_.sub_depth.subscribe(it, "camera_front_depth", 1);
+  front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), front_.sub_image, front_.sub_depth);
+  front_.sync->registerCallback(boost::bind(&Tracker::callbackExchange, this, _1, _2, std::ref(front_), std::ref(down_)));
   front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
   front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
 
-  down_.sub_image = it.subscribe("camera_down", 1, boost::bind(&Tracker::callbackImage, this, _1, std::ref(down_)), ros::VoidPtr(), hints);
+  down_.sub_image.subscribe(it, "camera_down", 1, hints);
+  down_.sub_depth.subscribe(it, "camera_down_depth", 1);
+  down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(1), down_.sub_image, down_.sub_depth);
+  down_.sync->registerCallback(boost::bind(&Tracker::callbackImage, this, _1, _2, std::ref(down_)));
   down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
   down_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(down_)));
 
@@ -76,14 +82,14 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
   ROS_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
 
-  cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(msg, "bgr8");
+  cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = img_bridge->image;
-  const auto& header = msg->header;
+  const auto& header = img_msg->header;
   cc.buffer.push_back({image, header.stamp});
 
   // this if statement is doing a lot:
@@ -105,21 +111,21 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext
   }
 }
 
-void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& msg, CameraContext& self, CameraContext& other) {
+void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other) {
   if (!initialized_) {
     return;
   }
 
   // | ------------------ perform the tracking on one camera ---------------- |
-  callbackImage(msg, self);
+  callbackImage(img_msg, depth_msg, self);
 
   // | ------------- exchange the information to the second camera ---------- |
   if (self.success) {
     std::lock_guard lock(other.exchange_mutex);
     other.got_exchange = true;
-    other.exchange_image = cv_bridge::toCvShare(msg, "bgr8")->image;
+    other.exchange_image = cv_bridge::toCvShare(img_msg, "bgr8")->image;
     other.exchange_bbox = self.bbox;
-    other.exchange_stamp = msg->header.stamp;
+    other.exchange_stamp = img_msg->header.stamp;
   }
 }
 

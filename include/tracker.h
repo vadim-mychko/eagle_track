@@ -13,6 +13,10 @@
 #include <image_geometry/pinhole_camera_model.h>
 #include <image_transport/subscriber_filter.h>
 
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
+
 #include <mrs_lib/transformer.h>
 #include <mrs_lib/dynamic_reconfigure_mgr.h>
 
@@ -30,6 +34,7 @@ struct CvImageStamped
   ros::Time stamp; // exact timestamp related to the image
 };
 
+using policy_t = message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::Image>;
 using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
 
 struct CameraContext
@@ -38,9 +43,11 @@ struct CameraContext
   bool got_camera_info = false; // whether received camera parameters already
 
   // | ---------------------------- subscribers ----------------------------- |
-  ros::Subscriber sub_info;              // for receiving camera parameters
-  image_transport::Subscriber sub_image; // for receiving images from the camera
-  ros::Subscriber sub_detection;         // for receiving incoming detections
+  std::unique_ptr<message_filters::Synchronizer<policy_t>> sync; // synchronizer for the image + depth
+  ros::Subscriber sub_info;                                      // for receiving camera parameters
+  image_transport::SubscriberFilter sub_image;                   // for receiving images from the camera
+  image_transport::SubscriberFilter sub_depth;                   // for receiving depth from the camera
+  ros::Subscriber sub_detection;                                 // for receiving incoming detections
 
   // | ----------------------------- publishers ----------------------------- |
   image_transport::Publisher pub_image;       // for publishing images + tracking result (points, bounding box, etc.)
@@ -57,6 +64,7 @@ struct CameraContext
   bool got_exchange = false; // whether got bounding box exchange
   std::mutex exchange_mutex; // mutex for synchronization between exchanges
   cv::Mat exchange_image;    // image received from the latest exchange
+  cv::Mat exchange_depth;    // depth image aligned with the the image from the latest exchange
   cv::Rect2d exchange_bbox;  // bounding box received from the latest exchange
   ros::Time exchange_stamp;  // timestamp of the latest exchange
 
@@ -91,8 +99,8 @@ private:
 
   // | ---------------------------- subscribers ----------------------------- |
   void callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc);
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg, CameraContext& cc);
-  void callbackExchange(const sensor_msgs::ImageConstPtr& msg, CameraContext& self, CameraContext& other);
+  void callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc);
+  void callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& self, CameraContext& other);
   void callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc);
 
   // | ----------------------------- publishers ----------------------------- |
