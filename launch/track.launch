@@ -31,7 +31,6 @@
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <!-- If using RAW images, change image_type varuable and subscribe to the rgbd_front/color/image_raw topic! -->
       <remap from="~camera_front/compressed" to="rgbd_front/color/image_raw/compressed" />
       <remap from="~camera_front_info" to="rgbd_front/color/camera_info" />
       <remap from="~camera_front_depth" to="rgbd_front/aligned_depth_to_color/image_raw" />
