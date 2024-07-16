@@ -28,3 +28,17 @@ Package for extending [VoFOD](https://github.com/ctu-mrs/vofod) with visual inpu
 | bbox_rosbag_analysis    | Branch for working with rosbags, contains hard-coded paths for saving pictures from cameras, nothing interesting here
 | bbox_rosbag_geom        | Branch for trying out the geometry of the pinhole camera model for exchanging information (unsuccessful), this branch is a joke
 | bbox_rosbag_nano        | Branch for trying to use Nano tracker from OpenCV 4.9.0 (unsuccessful). It requires building dependencies that depend on the OpenCV with the OpenCV 4.9.0 + compiling the eagle_track package with OpenCV 4.9.0. Compiled successfully, however crashes during runtime
+
+## Interception Trajectory Generation
+
+Might be outdated information, but the following packages are needed to start the interception algorithm in the simulation:
+**Also need to add *points* to the eagle_msgs Track.msg message like this:**
+sensor_msgs/PointCloud2   points
+Also set downsample_leaf_size in the lidar_tracker to 0.0
+
+* [eagle_gazebo_resources](https://mrs.fel.cvut.cz/gitlab/eagle_one/eagle_gazebo_resources) @00915f919ee6d84080a160cd3ae29669d9b6da97
+* [eagle_msgs](https://mrs.fel.cvut.cz/gitlab/eagle_one/eagle_msgs) @55ae047c015c217ba4556189bcb6af4000b22f53
+* [vofod](https://mrs.fel.cvut.cz/gitlab/eagle_one/vofod) @cfe3a8037950898c600bae7ed23d76f701e10563
+* [lidar_tracker](https://mrs.fel.cvut.cz/gitlab/kratot13/my-awesome-lidar) @be4e29877d3370fed91f2643a6e663bdc6b42c02
+* [interceptor](https://mrs.fel.cvut.cz/gitlab/vrbamato/interceptor) @3a27a7865fe6cad799315a0fa9d77a6c226ffd51
+* [mrs_uav_controllers](https://github.com/ctu-mrs/mrs_uav_controllers) @0113264f8ccb9239a8050d702588693abc1aad72
