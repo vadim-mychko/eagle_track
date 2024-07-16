@@ -24,7 +24,7 @@
 #include <boost/circular_buffer.hpp>
 
 #include <eagle_track/TrackParamsConfig.h>
-#include <lidar_tracker/Tracks.h>
+#include <eagle_msgs/Tracks.h>
 
 namespace eagle_track
 {
