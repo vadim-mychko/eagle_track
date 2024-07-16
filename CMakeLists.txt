@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   mrs_lib
   vofod
   lidar_tracker
+  eagle_msgs
 )
 
 find_package(OpenCV REQUIRED)

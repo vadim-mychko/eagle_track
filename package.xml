@@ -51,6 +51,7 @@
   <depend>image_geometry</depend>
   <depend>vofod</depend>
   <depend>lidar_tracker</depend>
+  <depend>eagle_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

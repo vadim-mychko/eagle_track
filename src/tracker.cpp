@@ -36,14 +36,14 @@ void Tracker::onInit() {
   front_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(rgbd_queue_size), front_.sub_image, front_.sub_depth);
   front_.sync->registerCallback(boost::bind(&Tracker::callbackExchange, this, _1, _2, std::ref(front_), std::ref(down_)));
   front_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_front_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(front_)));
-  front_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
+  front_.sub_detection = nh.subscribe<eagle_msgs::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(front_)));
 
   down_.sub_image.subscribe(it, "camera_down", 1, hints);
   down_.sub_depth.subscribe(it, "camera_down_depth", 1);
   down_.sync = std::make_unique<message_filters::Synchronizer<policy_t>>(policy_t(rgbd_queue_size), down_.sub_image, down_.sub_depth);
   down_.sync->registerCallback(boost::bind(&Tracker::callbackImage, this, _1, _2, std::ref(down_)));
   down_.sub_info = nh.subscribe<sensor_msgs::CameraInfo>("camera_down_info", 1, boost::bind(&Tracker::callbackCameraInfo, this, _1, std::ref(down_)));
-  down_.sub_detection = nh.subscribe<lidar_tracker::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(down_)));
+  down_.sub_detection = nh.subscribe<eagle_msgs::Tracks>("detection", 1, boost::bind(&Tracker::callbackDetection, this, _1, std::ref(down_)));
 
   // | ----------------------------- publishers ----------------------------- |
   front_.pub_image = it.advertise("tracker_front", 1);
@@ -135,13 +135,13 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
   }
 }
 
-void Tracker::callbackDetection(const lidar_tracker::TracksConstPtr& msg, CameraContext& cc) {
+void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraContext& cc) {
   if (!initialized_ || !cc.got_camera_info || msg->tracks.empty()) {
     return;
   }
 
   // | -------------------------- get the pointcloud ------------------------ |
-  auto it = std::find_if(msg->tracks.cbegin(), msg->tracks.cend(), [](const lidar_tracker::Track& track) {
+  auto it = std::find_if(msg->tracks.cbegin(), msg->tracks.cend(), [](const eagle_msgs::Track& track) {
     return track.selected;
   });
   const auto& points = it->points;
