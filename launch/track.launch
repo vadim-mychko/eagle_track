@@ -3,7 +3,6 @@
   <!-- defines name of the namespace of the drone -->
   <arg name="UAV_NAME" default="$(env UAV_NAME)" />
   <arg name="RUN_TYPE" default="$(env RUN_TYPE)" />
-  <arg name="image_type" default="compressed" />
 
   <!-- will it run using GNU debugger? -->
   <arg name="debug" default="false" />
@@ -26,13 +25,13 @@
 
       <!-- Parameters loaded from launch file -->
       <param name="UAV_NAME" type="string" value="$(arg UAV_NAME)" />
-      <param name="image_type" type="string" value="$(arg image_type)" />
+      <param name="image_type" type="string" value="compressed" />
 
       <!-- Parameters loaded from YAML config file -->
       <rosparam file="$(find eagle_track)/config/track_params.yaml" />
 
       <!-- Subscribers -->
-      <!-- If using RAW images, subscribe to the rgbd_front/color/image_raw topic! -->
+      <!-- If using RAW images, change image_type varuable and subscribe to the rgbd_front/color/image_raw topic! -->
       <remap from="~camera_front/compressed" to="rgbd_front/color/image_raw/compressed" />
       <remap from="~camera_front_info" to="rgbd_front/color/camera_info" />
       <remap from="~camera_front_depth" to="rgbd_front/aligned_depth_to_color/image_raw" />
