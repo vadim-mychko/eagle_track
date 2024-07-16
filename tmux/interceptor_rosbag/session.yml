@@ -15,7 +15,7 @@ windows:
   - rosbag:
       layout: tiled
       panes:
-        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/visual_tracking_dataset.bag
+        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/first.bag
   - rviz:
       layout: tiled
       panes:
