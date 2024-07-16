@@ -82,7 +82,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
   ROS_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
 }
 
-void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
+void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
   if (!initialized_) {
     return;
   }
@@ -124,6 +124,7 @@ void Tracker::callbackExchange(const sensor_msgs::ImageConstPtr& img_msg, const 
     std::lock_guard lock(other.exchange_mutex);
     other.got_exchange = true;
     other.exchange_image = cv_bridge::toCvShare(img_msg, "bgr8")->image;
+    other.exchange_depth = cv_bridge::toCvShare(depth_msg)->image;
     other.exchange_bbox = self.bbox;
     other.exchange_stamp = img_msg->header.stamp;
   }
@@ -280,12 +281,14 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   // | -------- obtain the latest exchange in a thread-safe manner ---------- |
   cv::Mat image;
+  cv::Mat depth;
   cv::Rect2d bbox;
   ros::Time stamp;
   {
     std::lock_guard lock(cc.exchange_mutex);
     cc.got_exchange = false;
     image = cc.exchange_image;
+    depth = cc.exchange_depth;
     bbox = cc.exchange_bbox;
     stamp = cc.exchange_stamp;
   }
