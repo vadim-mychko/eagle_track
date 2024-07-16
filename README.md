@@ -42,3 +42,5 @@ Also set downsample_leaf_size in the lidar_tracker to 0.0
 * [lidar_tracker](https://mrs.fel.cvut.cz/gitlab/kratot13/my-awesome-lidar) @be4e29877d3370fed91f2643a6e663bdc6b42c02
 * [interceptor](https://mrs.fel.cvut.cz/gitlab/vrbamato/interceptor) @3a27a7865fe6cad799315a0fa9d77a6c226ffd51
 * [mrs_uav_controllers](https://github.com/ctu-mrs/mrs_uav_controllers) @0113264f8ccb9239a8050d702588693abc1aad72
+
+Start ./tmux/simulation/start_full.sh in the **interceptor** package.
