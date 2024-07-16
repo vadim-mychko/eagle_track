@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Eagle Track",
+            "includePath": [
+                "${workspaceFolder}/include/**",
+                "/usr/include/opencv4/",
+                "/home/mychkvad/ws/eagle_ws_old/devel/include/",
+                "/home/mychkvad/ws/track_ws/devel/include/",
+                "/usr/include/eigen3/",
+                "/usr/include/pcl-1.10/",
+                "/opt/ros/noetic/include/"
+            ],
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
