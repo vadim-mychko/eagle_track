@@ -1,0 +1,26 @@
+# do not modify these
+root: ./
+name: simulation
+socket_name: mrs
+attach: false
+tmux_options: -f /etc/ctu-mrs/tmux.conf
+# you can modify these
+pre_window: export UAV_NAME=uav91; export TRACK_PATH=`rospack find eagle_track`
+startup_window: rosbag
+windows:
+  - roscore:
+      layout: tiled
+      panes:
+        - roscore
+  - rosbag:
+      layout: tiled
+      panes:
+        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/visual_tracking_dataset.bag
+  - rviz:
+      layout: tiled
+      panes:
+        - waitForRos; rviz -d $TRACK_PATH/rviz/interceptor.rviz
+  - track:
+      layout: tiled
+      panes:
+        - waitForRos; export RUN_TYPE=simulation; roslaunch eagle_track track.launch
