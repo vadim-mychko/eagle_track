@@ -260,7 +260,8 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
 
-  const double sync_error = std::abs(target - from->stamp.toSec());
+  constexpr double s2ms = 1000;
+  const double sync_error = std::abs(target - from->stamp.toSec()) * s2ms;
   NODELET_INFO_STREAM("[" << cc.name << "]: det: size=" << points.size() << " sync_error=" << sync_error << "ms");
 
   // | ---------------------- projections visualization --------------------- |
