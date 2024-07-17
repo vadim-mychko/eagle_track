@@ -80,7 +80,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
 
   cc.got_camera_info = true;
   cc.model.fromCameraInfo(*msg);
-  NODELET_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
+  NODELET_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
 }
 
 void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
@@ -90,7 +90,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
 
   constexpr double s2ms = 1000;
   const double sync_error = std::abs(img_msg->header.stamp.toSec() - depth_msg->header.stamp.toSec()) * s2ms;
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing image + depth, sync_error=" << sync_error << "ms");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: rgbd: sync_error=" << sync_error << "ms");
 
   cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = img_bridge->image;
@@ -186,12 +186,15 @@ void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraCon
 
   // | ---------------------- update the camera context --------------------- |
   std::lock_guard lock(cc.detection_mutex);
-  const double stamp_diff = std::abs(points.header.stamp.toSec() - cc.detection_stamp.toSec());
-  if (stamp_diff > 1e-9) {
-    cc.got_detection = true;
-    cc.detection_points = std::move(projections);
-    cc.detection_stamp = points.header.stamp;
-  }
+  cc.got_detection = true;
+  cc.detection_points = std::move(projections);
+  cc.detection_stamp = points.header.stamp;
+  // const double stamp_diff = std::abs(points.header.stamp.toSec() - cc.detection_stamp.toSec());
+  // if (stamp_diff > 1e-9) {
+  //   cc.got_detection = true;
+  //   cc.detection_points = std::move(projections);
+  //   cc.detection_stamp = points.header.stamp;
+  // }
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
@@ -251,14 +254,15 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
     return false;
   }
 
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing detection with " << points.size() << " points");
-
   // | ----------- find the closest image in terms of timestamps ------------ |
   const double target = stamp.toSec();
   auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
     [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
+
+  const double sync_error = std::abs(target - from->stamp.toSec());
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: det: size=" << points.size() << " sync_error=" << sync_error << "ms");
 
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
@@ -319,7 +323,7 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing exchange from the other camera");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: exchange");
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information

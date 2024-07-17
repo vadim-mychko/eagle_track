@@ -115,8 +115,8 @@ private:
   void publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub);
 
   // | ------------------------- tracker essentials ------------------------- |
-  CameraContext front_ = CameraContext("FrontCamera"); // camera context for the front camera
-  CameraContext down_ = CameraContext("DownCamera");   // camera context for the down camera
+  CameraContext front_ = CameraContext("Front"); // camera context for the front camera
+  CameraContext down_ = CameraContext("Down");   // camera context for the down camera
 
   cv::Ptr<cv::Tracker> choose_tracker(const int tracker_type);
   bool processDetection(CameraContext& cc, const std_msgs::Header& header);
