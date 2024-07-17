@@ -16,7 +16,7 @@ windows:
       layout: tiled
       panes:
         - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/first.bag
-        # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/seventh.bag -s 45 -r 0.25
+        # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/seventh.bag -s 45 -r 0.25 # has one interesting interception maneuver
   - rviz:
       layout: tiled
       panes:
