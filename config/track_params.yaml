@@ -7,4 +7,5 @@ image_buffer_size: 10
 # because image + depth might have different timestamps, use queue of the following size
 # i don't know why, but in the simulation image + depth are not perfectly aligned, so
 # we have to ApproximateTime policy
+# UPD: check the comment in the tracker.h for the probable reasons
 rgbd_queue_size: 3
