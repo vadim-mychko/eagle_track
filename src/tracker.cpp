@@ -8,7 +8,7 @@ CameraContext::CameraContext(const std::string& name) : name(name) {}
 void Tracker::onInit() {
   ros::NodeHandle nh = nodelet::Nodelet::getMTPrivateNodeHandle();
 
-  ROS_INFO_ONCE("[Tracker]: Waiting for valid time...");
+  NODELET_INFO_ONCE("[Tracker]: Waiting for valid time...");
   ros::Time::waitForValid();
 
   // | -------------------------- static parameters ------------------------- |
@@ -80,7 +80,7 @@ void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, Cam
 
   cc.got_camera_info = true;
   cc.model.fromCameraInfo(*msg);
-  ROS_INFO_STREAM("[" << cc.name << "]: Initialized camera info");
+  NODELET_INFO_STREAM_ONCE("[" << cc.name << "]: Initialized camera info");
 }
 
 void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_unused]] const sensor_msgs::ImageConstPtr& depth_msg, CameraContext& cc) {
@@ -90,7 +90,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
 
   constexpr double s2ms = 1000;
   const double sync_error = std::abs(img_msg->header.stamp.toSec() - depth_msg->header.stamp.toSec()) * s2ms;
-  ROS_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing image + depth, sync_error=" << sync_error << "ms");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing image + depth, sync_error=" << sync_error << "ms");
 
   cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = img_bridge->image;
@@ -248,7 +248,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
     return false;
   }
 
-  ROS_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing detection with " << points.size() << " points");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing detection with " << points.size() << " points");
 
   // | ----------- find the closest image in terms of timestamps ------------ |
   const double target = stamp.toSec();
@@ -316,7 +316,7 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  ROS_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing exchange from the other camera");
+  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: processing exchange from the other camera");
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
