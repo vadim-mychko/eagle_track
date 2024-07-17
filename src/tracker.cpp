@@ -185,10 +185,15 @@ void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraCon
   }
 
   // | ---------------------- update the camera context --------------------- |
+  // i don't know why, but sometimes the same detection is published multiple times
+  // same detection == detectino with the same timestamp; therefore, check if the timestamp actually differs
   std::lock_guard lock(cc.detection_mutex);
-  cc.got_detection = true;
-  cc.detection_points = std::move(projections);
-  cc.detection_stamp = points.header.stamp;
+  const double stamp_diff = std::abs(points.header.stamp.toSec() - cc.detection_stamp.toSec());
+  if (stamp_diff > 1e-9) {
+    cc.got_detection = true;
+    cc.detection_points = std::move(projections);
+    cc.detection_stamp = points.header.stamp;
+  }
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
