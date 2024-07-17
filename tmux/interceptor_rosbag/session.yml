@@ -15,8 +15,12 @@ windows:
   - rosbag:
       layout: tiled
       panes:
-        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/nineth.bag -s 30 -r 0.1 # has one interesting interception maneuver
-        # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/seventh.bag -s 45 -r 0.25 # has one interesting interception maneuver
+        # has one interesting interception maneuver at 45s
+        # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/seventh.bag -s 45 -r 0.25
+        # lasts only 30 seconds but it's the best one yet, 4 interception maneuvers with (plenty?) frames
+        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/eighth.bag -s 15 -r 0.25
+        # two maneuvers (challenging, two frames per camera...), start at 30s and 65s
+        # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/nineth.bag -s 30 -r 0.1
   - rviz:
       layout: tiled
       panes:
