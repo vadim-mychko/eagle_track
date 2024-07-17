@@ -189,12 +189,6 @@ void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraCon
   cc.got_detection = true;
   cc.detection_points = std::move(projections);
   cc.detection_stamp = points.header.stamp;
-  // const double stamp_diff = std::abs(points.header.stamp.toSec() - cc.detection_stamp.toSec());
-  // if (stamp_diff > 1e-9) {
-  //   cc.got_detection = true;
-  //   cc.detection_points = std::move(projections);
-  //   cc.detection_stamp = points.header.stamp;
-  // }
 }
 
 void Tracker::publishImage(cv::InputArray image, const std_msgs::Header& header, const std::string& encoding, image_transport::Publisher& pub) {
@@ -262,7 +256,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   });
 
   const double sync_error = std::abs(target - from->stamp.toSec());
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: det: size=" << points.size() << " sync_error=" << sync_error << "ms");
+  NODELET_INFO_STREAM("[" << cc.name << "]: det: size=" << points.size() << " sync_error=" << sync_error << "ms");
 
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
@@ -323,7 +317,7 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: exchange");
+  NODELET_INFO_STREAM("[" << cc.name << "]: exchange");
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
