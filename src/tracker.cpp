@@ -146,6 +146,19 @@ void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraCon
   });
   const auto& points = it->points;
 
+  // i don't know why, but the same detection might be published multiple times
+  // same detection == detection with the same timestamp
+  // however, this can be beneficial if the newly got image is closer to the detection in terms of the timestamps
+  // therefore the tracker is going to be re-initialized with the same detection and the new image, which leads to better initialization overall
+  // right now, do not perform the same work twice
+  {
+    std::lock_guard lock(cc.detection_mutex);
+    const double stamp_diff = std::abs(points.header.stamp.toSec() - cc.detection_stamp.toSec());
+    if (stamp_diff < 1e-9) {
+      return;
+    }
+  }
+
   // | ------------- get the transformation to the camera frame ------------- |
   auto ret = transformer_->getTransform(points.header.frame_id, cc.model.tfFrame(), points.header.stamp);
   if (!ret.has_value()) {
@@ -156,6 +169,9 @@ void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraCon
   // | --------------- convert PointCloud2 to pcl::PointCloud --------------- |
   pcl::PointCloud<pcl::PointXYZ> cloud;
   pcl::fromROSMsg(points, cloud);
+  if (cloud.points.empty()) {
+    return;
+  }
 
   // | ------------- transform the pointcloud to the camera frame ----------- |
   pcl_ros::transformPointCloud(cloud, cloud, ret.value().transform);
@@ -185,13 +201,6 @@ void Tracker::callbackDetection(const eagle_msgs::TracksConstPtr& msg, CameraCon
   }
 
   // | ---------------------- update the camera context --------------------- |
-  // i don't know why, but sometimes the same detection is published multiple times
-  // same detection == detectino with the same timestamp; therefore, check if the timestamp actually differs
-
-  // i don't know why, but the same detection might be published multiple times
-  // same detection == detection with the same timestamp
-  // however, this can be beneficial if the newly got image is closer to the detection in terms of the timestamps
-  // therefore the tracker is going to be re-initialized with the same detection and the new image, which leads to better initialization overall
   std::lock_guard lock(cc.detection_mutex);
   cc.got_detection = true;
   cc.detection_points = std::move(projections);
