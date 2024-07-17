@@ -41,7 +41,7 @@ struct CvImageStamped
 // error between synchronization in the simulation is < 0.1s (100 ms)
 // this might be connected to the very expensive simulation and too low-performant CPU
 // slow down the gazebo simulation `gz physics -u 250`, 250 is the default 1.0x speed
-// even when slowed down the simulation with `gz physics -u 60`, there's still sync_error < 4ms :C
+// even when slowed down the simulation with `gz physics -u 60`, there's still sync_error < 10ms :C
 using policy_t = message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image>;
 using drmgr_t = mrs_lib::DynamicReconfigureMgr<eagle_track::TrackParamsConfig>;
 
