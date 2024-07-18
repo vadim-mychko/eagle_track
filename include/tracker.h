@@ -1,3 +1,6 @@
+// WARNING: some comments might not contain the latest or useful information
+// I'm sorry about that, but i think the presence of the comments is better than their absence
+
 #ifndef TRACKER_H
 #define TRACKER_H
 
@@ -96,11 +99,11 @@ private:
   bool initialized_ = false; // whether the nodelet is initialized (after calling onInit())
 
   // | -------------------------- static parameters ------------------------- |
-  double _throttle_period_ = 1.0; // parameter regulating frequency of log messages 
+  double throttle_period_ = 1.0; // parameter regulating frequency of log messages 
 
   // | -------------------------- dynamic parameters ------------------------ |
-  int _tracker_type_ = eagle_track::TrackParams_MedianFlow; // type of the tracker to use (chosen by the dynamic config)
-  size_t _detection_points_threshold_ = 10;                 // described at config/TrackParams.cfg
+  int tracker_type_ = eagle_track::TrackParams_MedianFlow; // type of the tracker to use (chosen by the dynamic config)
+  size_t detection_points_threshold_ = 10;                 // described at config/TrackParams.cfg
 
   std::unique_ptr<drmgr_t> drmgr_;                                                   // dynamic config manager
   void callbackConfig(const eagle_track::TrackParamsConfig& config, uint32_t level); // dynamic config callback

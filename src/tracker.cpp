@@ -16,7 +16,7 @@ void Tracker::onInit() {
   NODELET_INFO_ONCE("[Tracker]: Loading static parameters:");
   const auto uav_name = pl.loadParam2<std::string>("UAV_NAME");
   const auto image_type = pl.loadParam2<std::string>("image_type");
-  pl.loadParam("throttle_period", _throttle_period_);
+  pl.loadParam("throttle_period", throttle_period_);
   const auto image_buffer_size = pl.loadParam2<int>("image_buffer_size");
   const auto rgbd_queue_size = pl.loadParam2<int>("rgbd_queue_size");
 
@@ -53,10 +53,10 @@ void Tracker::onInit() {
   down_.pub_projections = it.advertise("projections_down", 1);
 
   // | -------------------------- camera contexts --------------------------- |
-  front_.tracker = choose_tracker(_tracker_type_);
+  front_.tracker = choose_tracker(tracker_type_);
   front_.buffer.set_capacity(image_buffer_size);
 
-  down_.tracker = choose_tracker(_tracker_type_);
+  down_.tracker = choose_tracker(tracker_type_);
   down_.buffer.set_capacity(image_buffer_size);
 
   // | ------------------------ coordinate transforms ----------------------- |
@@ -69,8 +69,8 @@ void Tracker::onInit() {
 }
 
 void Tracker::callbackConfig(const eagle_track::TrackParamsConfig& config, [[maybe_unused]] uint32_t level) {
-  _tracker_type_ = config.tracker_type;
-  _detection_points_threshold_ = config.detection_points_threshold;
+  tracker_type_ = config.tracker_type;
+  detection_points_threshold_ = config.detection_points_threshold;
 }
 
 void Tracker::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg, CameraContext& cc) {
@@ -90,7 +90,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
 
   constexpr double s2ms = 1000;
   const double sync_error = std::abs(img_msg->header.stamp.toSec() - depth_msg->header.stamp.toSec()) * s2ms;
-  NODELET_INFO_STREAM_THROTTLE(_throttle_period_, "[" << cc.name << "]: rgbd: sync_error=" << sync_error << "ms");
+  NODELET_INFO_STREAM_THROTTLE(throttle_period_, "[" << cc.name << "]: rgbd: sync_error=" << sync_error << "ms");
 
   cv_bridge::CvImageConstPtr img_bridge = cv_bridge::toCvShare(img_msg, "bgr8");
   cv::Mat image = img_bridge->image;
@@ -260,7 +260,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 
   // second SAFE check if nothing changed during allocating the needed variables!
   if (!got_detection || points.empty()
-      || (cc.success && points.size() < _detection_points_threshold_)) {
+      || (cc.success && points.size() < detection_points_threshold_)) {
     return false;
   }
 
@@ -296,7 +296,7 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
 
   // | ----------------------- initialize the tracker ----------------------- |
   cc.bbox = cv::Rect2d(min_x, min_y, max_x - min_x, max_y - min_y);
-  cc.tracker = choose_tracker(_tracker_type_);
+  cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(from->image, cc.bbox);
 
   // | -------- perform tracking for all images left in the buffer ---------- |
@@ -338,7 +338,7 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
-  cc.tracker = choose_tracker(_tracker_type_);
+  cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(image, bbox);
 
   // | ----------- find the closest image in terms of timestamps ------------ |
