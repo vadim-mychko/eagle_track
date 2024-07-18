@@ -17,12 +17,22 @@ windows:
       panes:
         # has one interesting interception maneuver at 45s
         # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/seventh.bag -s 45 -r 0.25
+
         # lasts only 30 seconds but it's the best one yet, 4 interception maneuvers with (plenty?) frames
         # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/eighth.bag -s 15 -r 0.25
+
         # two maneuvers (challenging, two frames per camera...), start at 30s and 65s
         # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/nineth.bag -s 30 -r 0.1
+
         # idk about this one, very weird projections...
-        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/tenth.bag -s 10 -r 1.0
+        # - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/tenth.bag -s 10 -r 1.0
+
+        # best one yet? usable (cherry-picked) maneuvers: at 55s, 60s, 70s, 75s, 85s, 115s, 120s, 130s, 135s, 175s, 205s, 240s
+        # the best maneuvers are at: 75s, 135s, 205s, 240s
+        # probably the most number of frames with rather okay initialization is at 240s
+        # downsample_leaf_size is NOT set to 0.0, because interceptor starts acting funny; downsample_leaf_size is set to 0.25
+        # in some other scenarios i also experimented with 0.01, 0.1; but 0.25 is the best one yet for generating trajectories (but not tracking initilization)
+        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/best.bag -s 240 -r 0.25
   - rviz:
       layout: tiled
       panes:
