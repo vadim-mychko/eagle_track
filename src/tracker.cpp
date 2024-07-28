@@ -336,6 +336,19 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   NODELET_INFO_STREAM("[" << cc.name << "]: exchange");
 
+  // 1. backproject the center of the bounding box in the front camera
+  cv::Point2d center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
+  auto ray = front_.model.projectPixelTo3dRay(center);
+
+  // 2. complement the 3d ray with the depth information
+  cv::Point2i topleft_corner(bbox.x, bbox.y);
+  cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
+
+
+
+
+  // 3. transform the 3d ray from the front camera's coordinate system into the down camera's coordinate system
+
   // | ----------------------- initialize the tracker ----------------------- |
   // initialization is done on the image and bounding box from the camera that exchanged information
   cc.tracker = choose_tracker(tracker_type_);
