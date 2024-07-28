@@ -364,6 +364,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   // 4. transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
   auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
   auto val = ret.value();
+  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: " << transformer_->transformSingle(inferred_pos, "uav2/fcu").value());
 
   // 5. project the transformed 3d point onto the image plane of the down camera
   auto proj = down_.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
