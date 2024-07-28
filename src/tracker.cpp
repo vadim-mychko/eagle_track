@@ -366,6 +366,10 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   // transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
   auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
+  if (!ret.has_value()) {
+    NODELET_WARN_STREAM("[" << cc.name << "]: exchange: failed to transform the 3d point to the camera frame");
+    return false;
+  }
   auto val = ret.value();
 
   // project the transformed 3d point onto the image plane of the down camera
