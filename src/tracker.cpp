@@ -341,9 +341,19 @@ bool Tracker::processExchange(CameraContext& cc) {
   auto ray = front_.model.projectPixelTo3dRay(center);
 
   // 2. complement the 3d ray with the depth information
-  cv::Point2i topleft_corner(bbox.x, bbox.y);
-  cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
+  const cv::Point2i topleft_corner(bbox.x, bbox.y);
+  const cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
+  std::vector<double> depths_bbox;
+  for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
+    for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
+      constexpr double mm2m = 1e-3;
+      depths_bbox.push_back(depth.at<uint16_t>({x, y}) * mm2m);
+    }
+  }
 
+  std::sort(depths_bbox.begin(), depths_bbox.end());
+  const size_t middle = static_cast<size_t>(depths_bbox.size() / 2);
+  const double median_depth = depths_bbox[middle];
 
 
 
