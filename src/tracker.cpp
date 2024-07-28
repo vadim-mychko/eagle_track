@@ -345,7 +345,10 @@ bool Tracker::processExchange(CameraContext& cc) {
   for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
     for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
       constexpr double mm2m = 1e-3;
-      depths_bbox.push_back(depth.at<uint16_t>({x, y}) * mm2m);
+      const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
+      if (depth_num > 1e-6) {
+        depths_bbox.push_back(depth_num);
+      }
     }
   }
 
