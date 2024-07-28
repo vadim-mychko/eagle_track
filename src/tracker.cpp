@@ -334,11 +334,11 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  // 1. backproject the center of the bounding box in the front camera
+  // backproject the center of the bounding box in the front camera
   cv::Point2d center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
   auto ray = front_.model.projectPixelTo3dRay(center);
 
-  // 2. calculate the distance between the front camera's coordinate system and the target
+  // calculate the distance between the front camera's coordinate system and the target
   const cv::Point2i topleft_corner(bbox.x, bbox.y);
   const cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
   std::vector<double> depths_bbox;
@@ -353,7 +353,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   const size_t middle = static_cast<size_t>(depths_bbox.size() / 2);
   const double median_depth = depths_bbox[middle];
 
-  // 3. complement the 3d ray with the depth information and convert to the stamped pose
+  // complement the 3d ray with the depth information and convert to the stamped pose
   geometry_msgs::PointStamped inferred_pos;
   inferred_pos.header.frame_id = front_.model.tfFrame();
   inferred_pos.header.stamp = stamp;
@@ -361,28 +361,35 @@ bool Tracker::processExchange(CameraContext& cc) {
   inferred_pos.point.y = ray.y;
   inferred_pos.point.z = median_depth;
 
-  // 4. transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
+  // transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
   auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
   auto val = ret.value();
 
-  // 5. project the transformed 3d point onto the image plane of the down camera
+  // project the transformed 3d point onto the image plane of the down camera
   auto proj = down_.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
+  // check if the projected point is in the bounds of the image
+  const double cam_width = cc.model.fullResolution().width;
+  const double cam_height = cc.model.fullResolution().height;
+  if (proj.x < 0 || proj.x >= cam_width || proj.y < 0 || proj.y >= cam_height) {
+    return false;
+  }
+
   NODELET_INFO_STREAM("[" << cc.name << "]: exchange: projected 3d center point " << proj);
 
-  // 6. find the closest image in terms of timestamps
+  // find the closest image in terms of timestamps
   const double target = stamp.toSec();
   auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
     [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
 
-  // 7. initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
+  // initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
   cc.bbox = cv::Rect2d(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
                        proj.x + bbox.width / 2, proj.y + bbox.height / 2);
   cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(from->image, cc.bbox);
 
-  // 8. perform tracking for all images left in the buffer
+  // perform tracking for all images left in the buffer
   for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
