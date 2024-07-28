@@ -340,7 +340,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   cv::Point2d center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
   auto ray = front_.model.projectPixelTo3dRay(center);
 
-  // 2. complement the 3d ray with the depth information
+  // 2. calculate the distance between the front camera's coordinate system and the target
   const cv::Point2i topleft_corner(bbox.x, bbox.y);
   const cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
   std::vector<double> depths_bbox;
@@ -355,6 +355,8 @@ bool Tracker::processExchange(CameraContext& cc) {
   const size_t middle = static_cast<size_t>(depths_bbox.size() / 2);
   const double median_depth = depths_bbox[middle];
 
+  // 3. complement the 3d ray with the depth information and convert to the stamped pose
+  
 
 
   // 3. transform the 3d ray from the front camera's coordinate system into the down camera's coordinate system
