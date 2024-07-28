@@ -334,8 +334,6 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  NODELET_INFO_STREAM("[" << cc.name << "]: exchange");
-
   // 1. backproject the center of the bounding box in the front camera
   cv::Point2d center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
   auto ray = front_.model.projectPixelTo3dRay(center);
