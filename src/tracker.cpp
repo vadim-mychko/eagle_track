@@ -383,9 +383,17 @@ bool Tracker::processExchange(CameraContext& cc) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
 
-  // initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
-  cc.bbox = cv::Rect2d(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
+  // create the bounding box to initialize the down tracker
+  cv::Rect2d init_bbox(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
                        proj.x + bbox.width / 2, proj.y + bbox.height / 2);
+  constexpr double min_width = 10.0;
+  constexpr double min_height = 10.0;
+  if (bbox.width < min_width || bbox.height < min_height) {
+    return false;
+  }
+
+  // initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
+  cc.bbox = init_bbox;
   cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(from->image, cc.bbox);
 
