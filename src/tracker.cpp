@@ -389,8 +389,8 @@ bool Tracker::processExchange(CameraContext& cc) {
   // create the bounding box to initialize the down tracker
   cv::Rect2d init_bbox(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
                        proj.x + bbox.width / 2, proj.y + bbox.height / 2);
-  constexpr double min_width = 10.0;
-  constexpr double min_height = 10.0;
+  constexpr double min_width = 20.0;
+  constexpr double min_height = 20.0;
   if (init_bbox.width < min_width || init_bbox.height < min_height) {
     return false;
   }
