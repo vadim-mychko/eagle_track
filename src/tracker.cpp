@@ -356,27 +356,40 @@ bool Tracker::processExchange(CameraContext& cc) {
   const double median_depth = depths_bbox[middle];
 
   // 3. complement the 3d ray with the depth information and convert to the stamped pose
-  
+  geometry_msgs::PointStamped inferred_pos;
+  inferred_pos.header.frame_id = front_.model.tfFrame();
+  inferred_pos.header.stamp = stamp;
+  inferred_pos.point.x = ray.x;
+  inferred_pos.point.y = ray.y;
+  inferred_pos.point.z = median_depth;
 
+  // 4. transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
+  auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
+  auto val = ret.value();
 
-  // 3. transform the 3d ray from the front camera's coordinate system into the down camera's coordinate system
+  // 5. project the transformed 3d point onto the image plane of the down camera
+  auto proj = down_.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
+  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: projected 3d center point " << proj);
 
-  // | ----------------------- initialize the tracker ----------------------- |
-  // initialization is done on the image and bounding box from the camera that exchanged information
-  cc.tracker = choose_tracker(tracker_type_);
-  cc.success = cc.tracker->init(image, bbox);
-
-  // | ----------- find the closest image in terms of timestamps ------------ |
+  // 6. find the closest image in terms of timestamps
   const double target = stamp.toSec();
   auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
     [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
 
-  // | -------- perform tracking for all images left in the buffer ---------- |
-  for (auto it = from; it < cc.buffer.end() && cc.success; ++it) {
+  // 7. initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
+  cc.bbox = cv::Rect2d(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
+                       proj.x + bbox.width / 2, proj.y + bbox.height / 2);
+  cc.tracker = choose_tracker(tracker_type_);
+  cc.success = cc.tracker->init(from->image, cc.bbox);
+
+  // 8. perform tracking for all images left in the buffer
+  for (auto it = from + 1; it < cc.buffer.end() && cc.success; ++it) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
+
+  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: new bbox " << cc.bbox);
 
   return true;
 }
