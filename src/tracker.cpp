@@ -388,7 +388,7 @@ bool Tracker::processExchange(CameraContext& cc) {
                        proj.x + bbox.width / 2, proj.y + bbox.height / 2);
   constexpr double min_width = 10.0;
   constexpr double min_height = 10.0;
-  if (bbox.width < min_width || bbox.height < min_height) {
+  if (init_bbox.width < min_width || init_bbox.height < min_height) {
     return false;
   }
 
