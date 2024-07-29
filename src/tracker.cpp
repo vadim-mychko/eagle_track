@@ -370,7 +370,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
     for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
       constexpr double mm2m = 1e-3;
-      constexpr double max_depthdiff = 0.5;
+      constexpr double max_depthdiff = 2.0;
       const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
       if (std::abs(depth_num - estimated_depth) > max_depthdiff) {
         continue;
