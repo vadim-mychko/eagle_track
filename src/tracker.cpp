@@ -387,14 +387,16 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: projected 3d center point " << proj);
-
   // find the closest image in terms of timestamps
   const double target = stamp.toSec();
   const auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
     [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
+
+  constexpr double s2ms = 1000;
+  const double sync_error = std::abs(from->stamp.toSec() - target) * s2ms;
+  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: projected 3d center point " << proj << ", sync_error=" << sync_error << "ms");
 
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
