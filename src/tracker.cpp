@@ -377,7 +377,7 @@ bool Tracker::processExchange(CameraContext& cc) {
       }
 
       // backproject the point from the image plane into the world
-      const auto ray = front_.model.projectPixelTo3dRay({x, y});
+      const auto ray = front_.model.projectPixelTo3dRay({static_cast<double>(x), static_cast<double>(y)});
 
       // complement the 3d ray with the depth information and convert to the stamped pose
       geometry_msgs::PointStamped inferred_pos;
