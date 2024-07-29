@@ -415,7 +415,9 @@ bool Tracker::processExchange(CameraContext& cc) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
 
-  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: initial bbox " << cc.bbox);
+  if (cc.success) {
+    NODELET_INFO_STREAM("[" << cc.name << "]: exchange: initial bbox " << cc.bbox);
+  }
 
   return true;
 }
