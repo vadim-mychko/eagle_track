@@ -370,7 +370,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
     for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
       constexpr double mm2m = 1e-3;
-      constexpr double max_depthdiff = 0.5;
+      constexpr double max_depthdiff = 1.0;
       const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
       if (std::abs(depth_num - estimated_depth) > max_depthdiff) {
         continue;
@@ -397,11 +397,6 @@ bool Tracker::processExchange(CameraContext& cc) {
 
       // project the transformed 3d point onto the image plane of the down camera
       const auto proj = cc.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
-      // check if the projected point is in the bounds of the image
-      if (proj.x < 0 || proj.x >= cam_width || proj.y < 0 || proj.y >= cam_height) {
-        continue;
-      }
-
       projected_points.push_back(proj);
     }
   }
