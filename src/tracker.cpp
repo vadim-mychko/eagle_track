@@ -370,7 +370,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
     for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
       constexpr double mm2m = 1e-3;
-      constexpr double max_depthdiff = 2.0;
+      constexpr double max_depthdiff = 0.5;
       const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
       if (std::abs(depth_num - estimated_depth) > max_depthdiff) {
         continue;
@@ -388,7 +388,7 @@ bool Tracker::processExchange(CameraContext& cc) {
       inferred_pos.point.z = depth_num;
 
       // transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
-      const auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
+      const auto ret = transformer_->transformSingle(inferred_pos, cc.model.tfFrame());
       if (!ret.has_value()) {
         NODELET_WARN_STREAM("[" << cc.name << "]: exchange: failed to transform the 3d point to the camera frame");
         continue;
@@ -396,7 +396,7 @@ bool Tracker::processExchange(CameraContext& cc) {
       const auto val = ret.value();
 
       // project the transformed 3d point onto the image plane of the down camera
-      const auto proj = down_.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
+      const auto proj = cc.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
       // check if the projected point is in the bounds of the image
       if (proj.x < 0 || proj.x >= cam_width || proj.y < 0 || proj.y >= cam_height) {
         continue;
