@@ -345,7 +345,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   // also check if the sync error is too high (in millisecons)
   constexpr double min_width = 20.0;
   constexpr double min_height = 20.0;
-  constexpr double max_syncerror = 35.0;
+  constexpr double max_syncerror = 40.0;
   if (!got_exchange || bbox.width < min_width || bbox.height < min_height || sync_error > max_syncerror) {
     return false;
   }
