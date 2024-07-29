@@ -355,9 +355,12 @@ bool Tracker::processExchange(CameraContext& cc) {
     }
   }
 
+  // estimate the depth at the center of the bounding box
   std::sort(depths_bbox.begin(), depths_bbox.end());
-  const size_t middle = static_cast<size_t>(depths_bbox.size() / 2);
-  const double median_depth = depths_bbox[middle];
+  const size_t lowerIndex = depths_bbox.size() / 4;
+  const size_t upperIndex = depths_bbox.size() * 3 / 4;
+  const double sum = std::accumulate(depths_bbox.begin() + lowerIndex, depths_bbox.begin() + upperIndex, 0.0);
+  const double estimated_depth = sum / (upperIndex - lowerIndex);
 
   // complement the 3d ray with the depth information and convert to the stamped pose
   geometry_msgs::PointStamped inferred_pos;
@@ -365,7 +368,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   inferred_pos.header.stamp = stamp;
   inferred_pos.point.x = ray.x;
   inferred_pos.point.y = ray.y;
-  inferred_pos.point.z = median_depth;
+  inferred_pos.point.z = estimated_depth;
 
   // transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
   auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
