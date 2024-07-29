@@ -358,9 +358,6 @@ bool Tracker::processExchange(CameraContext& cc) {
   const double sum = std::accumulate(depths_bbox.begin() + lowerIndex, depths_bbox.begin() + upperIndex, 0.0);
   const double estimated_depth = sum / (upperIndex - lowerIndex);
 
-  const double cam_width = cc.model.fullResolution().width;
-  const double cam_height = cc.model.fullResolution().height;
-
   // iterate over all points in the bounding box of the front camera, backproject them, then
   // compare if their depth is close to the estimated depth of the flying object
   // 1) iterate over all points in the bouding box of the front camera
