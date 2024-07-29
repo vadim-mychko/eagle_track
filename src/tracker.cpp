@@ -330,7 +330,10 @@ bool Tracker::processExchange(CameraContext& cc) {
   }
 
   // second SAFE check if nothing changed during allocating the needed variables!
-  if (cc.success || !got_exchange) {
+  // also check if the exchanged bounding box is not too small
+  constexpr double min_width = 20.0;
+  constexpr double min_height = 20.0;
+  if (cc.success || !got_exchange || bbox.width < min_width || bbox.height < min_height) {
     return false;
   }
 
@@ -390,17 +393,9 @@ bool Tracker::processExchange(CameraContext& cc) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
 
-  // create the bounding box to initialize the down tracker
-  cv::Rect2d init_bbox(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
-                       proj.x + bbox.width / 2, proj.y + bbox.height / 2);
-  constexpr double min_width = 20.0;
-  constexpr double min_height = 20.0;
-  if (init_bbox.width < min_width || init_bbox.height < min_height) {
-    return false;
-  }
-
   // initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
-  cc.bbox = init_bbox;
+  cc.bbox = cv::Rect2d(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
+                       proj.x + bbox.width / 2, proj.y + bbox.height / 2);
   cc.tracker = choose_tracker(tracker_type_);
   cc.success = cc.tracker->init(from->image, cc.bbox);
 
