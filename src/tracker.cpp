@@ -333,7 +333,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   // also check if the exchanged bounding box is not too small
   constexpr double min_width = 20.0;
   constexpr double min_height = 20.0;
-  if (cc.success || !got_exchange || bbox.width < min_width || bbox.height < min_height) {
+  if (!got_exchange || bbox.width < min_width || bbox.height < min_height) {
     return false;
   }
 
