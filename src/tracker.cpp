@@ -338,8 +338,8 @@ bool Tracker::processExchange(CameraContext& cc) {
   }
 
   // backproject the center of the bounding box in the front camera
-  cv::Point2d center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
-  auto ray = front_.model.projectPixelTo3dRay(center);
+  const cv::Point2d center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
+  const auto ray = front_.model.projectPixelTo3dRay(center);
 
   // calculate the distance between the front camera's coordinate system and the target
   const cv::Point2i topleft_corner(bbox.x, bbox.y);
@@ -371,15 +371,15 @@ bool Tracker::processExchange(CameraContext& cc) {
   inferred_pos.point.z = estimated_depth;
 
   // transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
-  auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
+  const auto ret = transformer_->transformSingle(inferred_pos, down_.model.tfFrame());
   if (!ret.has_value()) {
     NODELET_WARN_STREAM("[" << cc.name << "]: exchange: failed to transform the 3d point to the camera frame");
     return false;
   }
-  auto val = ret.value();
+  const auto val = ret.value();
 
   // project the transformed 3d point onto the image plane of the down camera
-  auto proj = down_.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
+  const auto proj = down_.model.project3dToPixel({val.point.x, val.point.y, val.point.z});
   // check if the projected point is in the bounds of the image
   const double cam_width = cc.model.fullResolution().width;
   const double cam_height = cc.model.fullResolution().height;
@@ -391,10 +391,18 @@ bool Tracker::processExchange(CameraContext& cc) {
 
   // find the closest image in terms of timestamps
   const double target = stamp.toSec();
-  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+  const auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
     [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
       return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
   });
+
+  // | ---------------------- projections visualization --------------------- |
+  cv::Mat projection_image = from->image.clone();
+  cv::circle(projection_image, proj, 6, {0, 0, 255}, -1);
+  std_msgs::Header header;
+  header.frame_id = cc.model.tfFrame();
+  header.stamp = from->stamp;
+  publishImage(projection_image, header, "bgr8", cc.pub_projections);
 
   // initialize the down camera tracker with the projected 3d center point and dimensions of the original bounding box
   cc.bbox = cv::Rect2d(proj.x - bbox.width / 2, proj.y - bbox.height / 2,
