@@ -329,11 +329,24 @@ bool Tracker::processExchange(CameraContext& cc) {
     stamp = cc.exchange_stamp;
   }
 
+  // find the closest image in terms of timestamps
+  const double target = stamp.toSec();
+  const auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+  });
+
+  // calculate synchronization error in milliseconds
+  constexpr double s2ms = 1000;
+  const double sync_error = std::abs(from->stamp.toSec() - target) * s2ms;
+
   // second SAFE check if nothing changed during allocating the needed variables!
   // also check if the exchanged bounding box is not too small
+  // also check if the sync error is too high (in millisecons)
   constexpr double min_width = 20.0;
   constexpr double min_height = 20.0;
-  if (!got_exchange || bbox.width < min_width || bbox.height < min_height) {
+  constexpr double max_syncerror = 35.0;
+  if (!got_exchange || bbox.width < min_width || bbox.height < min_height || sync_error > max_syncerror) {
     return false;
   }
 
@@ -387,15 +400,6 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  // find the closest image in terms of timestamps
-  const double target = stamp.toSec();
-  const auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
-      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
-  });
-
-  constexpr double s2ms = 1000;
-  const double sync_error = std::abs(from->stamp.toSec() - target) * s2ms;
   NODELET_INFO_STREAM("[" << cc.name << "]: exchange: projected 3d center point " << proj << ", sync_error=" << sync_error << "ms");
 
   // | ---------------------- projections visualization --------------------- |
