@@ -109,19 +109,29 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
     publishImage(image, header, "bgr8", cc.pub_image);
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << header.stamp.toSec();
+    cv::rectangle(image, {1200, 40, 55, 20}, {255, 255, 255}, -1);
+    cv::rectangle(image, {1200, 40, 55, 20}, {0, 0, 0}, 3);
+    cv::putText(image, "t = " + oss.str(), {1200, 40}, cv::FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 2);
     if (cc.name == "Front") {
-      cv::imwrite("/home/mychkvad/interception_vis/worse/front_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
+      cv::imwrite("/home/mychkvad/interception_vis/best_text/front_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
     } else {
-      cv::imwrite("/home/mychkvad/interception_vis/worse/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
+      cv::imwrite("/home/mychkvad/interception_vis/best_text/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
     }
   } else {
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, cc.bbox, {0, 0, 255}, 3);
     publishImage(track_image, header, "bgr8", cc.pub_image);
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << header.stamp.toSec();
+    cv::rectangle(track_image, {1200, 40, 55, 20}, {255, 255, 255}, -1);
+    cv::rectangle(track_image, {1200, 40, 55, 20}, {0, 0, 0}, 3);
+    cv::putText(track_image, "t = " + oss.str(), {1200, 40}, cv::FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 2);
     if (cc.name == "Front") {
-      cv::imwrite("/home/mychkvad/interception_vis/worse/front_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
+      cv::imwrite("/home/mychkvad/interception_vis/best_text/front_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
     } else {
-      cv::imwrite("/home/mychkvad/interception_vis/worse/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
+      cv::imwrite("/home/mychkvad/interception_vis/best_text/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
     }
   }
 }
@@ -291,7 +301,12 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
     cv::circle(projection_image, point, 6, {255, 0, 0}, -1);
   }
   publishImage(projection_image, header, "bgr8", cc.pub_projections);
-  cv::imwrite("/home/mychkvad/interception_vis/worse/front_proj/" + std::to_string(header.stamp.toNSec()) + ".jpg", projection_image);
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(2) << header.stamp.toSec();
+  cv::rectangle(projection_image, {1200, 40, 55, 20}, {255, 255, 255}, -1);
+  cv::rectangle(projection_image, {1200, 40, 55, 20}, {0, 0, 0}, 3);
+  cv::putText(projection_image, "t = " + oss.str(), {1200, 40}, cv::FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 2);
+  cv::imwrite("/home/mychkvad/interception_vis/best_text/front_proj/" + std::to_string(header.stamp.toNSec()) + ".jpg", projection_image);
 
   // | ----------- transform the detection into the bounding box ------------ |
   double min_x = cc.model.fullResolution().width;
@@ -430,7 +445,14 @@ bool Tracker::processExchange(CameraContext& cc) {
   for (const auto& point : projected_points) {
     cv::circle(projection_image, point, 6, {255, 0, 0}, -1);
   }
-  cv::imwrite("/home/mychkvad/interception_vis/worse/down_proj/" + std::to_string(from->stamp.toNSec()) + ".jpg", projection_image);
+
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(2) << from->stamp.toSec();
+  cv::rectangle(projection_image, {1200, 40, 55, 20}, {255, 255, 255}, -1);
+  cv::rectangle(projection_image, {1200, 40, 55, 20}, {0, 0, 0}, 3);
+  cv::putText(projection_image, "t = " + oss.str(), {1200, 40}, cv::FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 2);
+
+  cv::imwrite("/home/mychkvad/interception_vis/best_text/down_proj/" + std::to_string(from->stamp.toNSec()) + ".jpg", projection_image);
   std_msgs::Header header;
   header.frame_id = cc.model.tfFrame();
   header.stamp = from->stamp;
