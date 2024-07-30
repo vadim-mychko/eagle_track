@@ -33,7 +33,7 @@ windows:
         # probably the most number of frames with rather okay initialization is at 240s
         # downsample_leaf_size is NOT set to 0.0, because interceptor starts acting funny; downsample_leaf_size is set to 0.25
         # in some other scenarios i also experimented with 0.01, 0.1; but 0.25 is the best one yet for generating trajectories (but not tracking initilization)
-        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/best.bag -s 207 -r 0.25
+        - waitForRos; rosbag play $TRACK_PATH/tmux/interceptor_rosbag/best.bag -s 240 -r 0.25
   - rviz:
       layout: tiled
       panes:
