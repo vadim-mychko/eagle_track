@@ -108,7 +108,6 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
 
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
-    publishImage(image, header, "bgr8", cc.pub_image);
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(3) << header.stamp.toSec();
     cv::putText(image, "t = " + oss.str() + "s", {25, 40}, cv::FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 3);
@@ -117,10 +116,10 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     } else {
       cv::imwrite("/home/mychkvad/interception_vis/best_text/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
     }
+    publishImage(image, header, "bgr8", cc.pub_image);
   } else {
     cv::Mat track_image = image.clone();
     cv::rectangle(track_image, cc.bbox, {0, 0, 255}, 3);
-    publishImage(track_image, header, "bgr8", cc.pub_image);
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(3) << header.stamp.toSec();
     cv::putText(track_image, "t = " + oss.str() + "s", {25, 40}, cv::FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 3);
@@ -129,6 +128,7 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
     } else {
       cv::imwrite("/home/mychkvad/interception_vis/best_text/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
     }
+    publishImage(track_image, header, "bgr8", cc.pub_image);
   }
 }
 
