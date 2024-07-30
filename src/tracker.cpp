@@ -329,11 +329,23 @@ bool Tracker::processExchange(CameraContext& cc) {
     stamp = cc.exchange_stamp;
   }
 
+  // find the closest image in terms of timestamps
+  const double target = stamp.toSec();
+  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
+    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
+      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
+  });
+
+  // calculate synchronization error in milliseconds
+  constexpr double s2ms = 1000;
+  const double sync_error = std::abs(from->stamp.toSec() - target) * s2ms;
+
   // second SAFE check if nothing changed during allocating the needed variables!
   // also check if the exchanged bounding box is not too small
   constexpr double min_width = 20.0;
   constexpr double min_height = 20.0;
-  if (cc.success || !got_exchange || bbox.width < min_width || bbox.height < min_height) {
+  constexpr double max_syncerror = 40.0;
+  if (cc.success || !got_exchange || bbox.width < min_width || bbox.height < min_height || sync_error > max_syncerror) {
     return false;
   }
 
@@ -351,7 +363,7 @@ bool Tracker::processExchange(CameraContext& cc) {
   std::vector<cv::Point2d> projected_points;
   for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
     for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
-      
+
       constexpr double max_depthdiff = 1.0;
       const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
       if (std::abs(depth_num - center_depth) > max_depthdiff) {
@@ -382,13 +394,6 @@ bool Tracker::processExchange(CameraContext& cc) {
       projected_points.push_back(proj);
     }
   }
-
-  // find the closest image in terms of timestamps
-  const double target = stamp.toSec();
-  auto from = std::min_element(cc.buffer.begin(), cc.buffer.end(),
-    [&target](const CvImageStamped& lhs, const CvImageStamped& rhs) {
-      return std::abs(lhs.stamp.toSec() - target) < std::abs(rhs.stamp.toSec() - target);
-  });
 
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
@@ -423,7 +428,7 @@ bool Tracker::processExchange(CameraContext& cc) {
     cc.success = cc.tracker->update(it->image, cc.bbox);
   }
 
-  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: initial bbox " << cc.bbox);
+  NODELET_INFO_STREAM("[" << cc.name << "]: exchange: initial bbox " << cc.bbox << ", sync_error=" << sync_error << "ms");
 
   return true;
 }
