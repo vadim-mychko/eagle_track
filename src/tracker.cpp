@@ -337,39 +337,24 @@ bool Tracker::processExchange(CameraContext& cc) {
     return false;
   }
 
-  // calculate the distance between the front camera's coordinate system and the target
-  const cv::Point2i topleft_corner(bbox.x, bbox.y);
-  const cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
-  std::vector<double> depths_bbox;
-  for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
-    for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
-      constexpr double mm2m = 1e-3;
-      const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
-      if (depth_num > 1e-6) {
-        depths_bbox.push_back(depth_num);
-      }
-    }
-  }
-
-  // estimate the depth at the center of the bounding box
-  std::sort(depths_bbox.begin(), depths_bbox.end());
-  const size_t lowerIndex = depths_bbox.size() / 4;
-  const size_t upperIndex = depths_bbox.size() * 3 / 4;
-  const double sum = std::accumulate(depths_bbox.begin() + lowerIndex, depths_bbox.begin() + upperIndex, 0.0);
-  const double estimated_depth = sum / (upperIndex - lowerIndex);
+  const cv::Point2i center(bbox.x + bbox.width / 2, bbox.y + bbox.height / 2);
+  constexpr double mm2m = 1e-3;
+  const double center_depth = depth.at<uint16_t>(center) * mm2m;
 
   // iterate over all points in the bounding box of the front camera, backproject them, then
   // compare if their depth is close to the estimated depth of the flying object
   // 1) iterate over all points in the bouding box of the front camera
   // 2) check if the points depth is within certain threshold of the estimated depth of the center of the object (in meters)
   // 3) if it is within the threshold, backproject it, transform, project onto the second camera and visualize
+  const cv::Point2i topleft_corner(bbox.x, bbox.y);
+  const cv::Point2i botright_corner(bbox.x + bbox.width, bbox.y + bbox.height);
   std::vector<cv::Point2d> projected_points;
   for (int y = topleft_corner.y; y <= botright_corner.y; ++y) {
     for (int x = topleft_corner.x; x <= botright_corner.x; ++x) {
-      constexpr double mm2m = 1e-3;
+      
       constexpr double max_depthdiff = 1.0;
       const double depth_num = depth.at<uint16_t>({x, y}) * mm2m;
-      if (std::abs(depth_num - estimated_depth) > max_depthdiff) {
+      if (std::abs(depth_num - center_depth) > max_depthdiff) {
         continue;
       }
 
@@ -380,8 +365,8 @@ bool Tracker::processExchange(CameraContext& cc) {
       geometry_msgs::PointStamped inferred_pos;
       inferred_pos.header.frame_id = front_.model.tfFrame();
       inferred_pos.header.stamp = stamp;
-      inferred_pos.point.x = ray.x;
-      inferred_pos.point.y = ray.y;
+      inferred_pos.point.x = depth_num * ray.x;
+      inferred_pos.point.y = depth_num * ray.y;
       inferred_pos.point.z = depth_num;
 
       // transform the 3d point from the front camera's coordinate system into the down camera's coordinate system
