@@ -109,10 +109,20 @@ void Tracker::callbackImage(const sensor_msgs::ImageConstPtr& img_msg, [[maybe_u
   // | ----------------------- tracking visualization ----------------------- |
   if (!cc.success) {
     publishImage(image, header, "bgr8", cc.pub_image);
+    if (cc.name == "Front") {
+      cv::imwrite("/home/mychkvad/interception_vis/best/front_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
+    } else {
+      cv::imwrite("/home/mychkvad/interception_vis/best/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", image);
+    }
   } else {
     cv::Mat track_image = image.clone();
-    cv::rectangle(track_image, cc.bbox, {255, 0, 0}, 3);
+    cv::rectangle(track_image, cc.bbox, {0, 0, 255}, 3);
     publishImage(track_image, header, "bgr8", cc.pub_image);
+    if (cc.name == "Front") {
+      cv::imwrite("/home/mychkvad/interception_vis/best/front_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
+    } else {
+      cv::imwrite("/home/mychkvad/interception_vis/best/down_track/" + std::to_string(header.stamp.toNSec()) + ".jpg", track_image);
+    }
   }
 }
 
@@ -278,9 +288,10 @@ bool Tracker::processDetection(CameraContext& cc, const std_msgs::Header& header
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
   for (const auto& point : points) {
-    cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
+    cv::circle(projection_image, point, 6, {255, 0, 0}, -1);
   }
   publishImage(projection_image, header, "bgr8", cc.pub_projections);
+  cv::imwrite("/home/mychkvad/interception_vis/best/front_proj/" + std::to_string(header.stamp.toNSec()) + ".jpg", projection_image);
 
   // | ----------- transform the detection into the bounding box ------------ |
   double min_x = cc.model.fullResolution().width;
@@ -417,8 +428,9 @@ bool Tracker::processExchange(CameraContext& cc) {
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
   for (const auto& point : projected_points) {
-    cv::circle(projection_image, point, 3, {0, 0, 255}, -1);
+    cv::circle(projection_image, point, 6, {255, 0, 0}, -1);
   }
+  cv::imwrite("/home/mychkvad/interception_vis/best/down_proj/" + std::to_string(from->stamp.toNSec()) + ".jpg", projection_image);
   std_msgs::Header header;
   header.frame_id = cc.model.tfFrame();
   header.stamp = from->stamp;
