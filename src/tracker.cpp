@@ -410,6 +410,10 @@ bool Tracker::processExchange(CameraContext& cc) {
     }
   }
 
+  if (projected_points.size() < 2) {
+    return false;
+  }
+
   // | ---------------------- projections visualization --------------------- |
   cv::Mat projection_image = from->image.clone();
   for (const auto& point : projected_points) {
